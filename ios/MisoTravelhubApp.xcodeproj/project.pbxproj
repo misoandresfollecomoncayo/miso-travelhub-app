@@ -273,6 +273,9 @@
 					"-ObjC",
 					"-lc++",
 				);
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = N6U7F785LT;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = MisoTravelhubApp;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -302,6 +305,9 @@
 					"-ObjC",
 					"-lc++",
 				);
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = N6U7F785LT;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = MisoTravelhubApp;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

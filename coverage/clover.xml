@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<coverage generated="1774742882713" clover="3.2.0">
+  <project timestamp="1774742882713" name="All files">
+    <metrics statements="111" coveredstatements="106" conditionals="42" coveredconditionals="41" methods="31" coveredmethods="26" elements="184" coveredelements="173" complexity="0" loc="111" ncloc="111" packages="6" files="12" classes="12"/>
+    <package name="miso-travelhub-app">
+      <metrics statements="1" coveredstatements="1" conditionals="0" coveredconditionals="0" methods="1" coveredmethods="1"/>
+      <file name="App.tsx" path="/Users/quantumsoft/Downloads/MISO/proyecto-final/miso-travelhub-app/App.tsx">
+        <metrics statements="1" coveredstatements="1" conditionals="0" coveredconditionals="0" methods="1" coveredmethods="1"/>
+        <line num="8" count="1" type="stmt"/>
+      </file>
+    </package>
+    <package name="miso-travelhub-app.src.components">
+      <metrics statements="41" coveredstatements="41" conditionals="27" coveredconditionals="27" methods="10" coveredmethods="10"/>
+      <file name="AccommodationCard.tsx" path="/Users/quantumsoft/Downloads/MISO/proyecto-final/miso-travelhub-app/src/components/AccommodationCard.tsx">
+        <metrics statements="10" coveredstatements="10" conditionals="2" coveredconditionals="2" methods="3" coveredmethods="3"/>
+        <line num="10" count="3" type="stmt"/>
+        <line num="11" count="77" type="stmt"/>
+        <line num="14" count="3" type="stmt"/>
+        <line num="15" count="77" type="stmt"/>
+        <line num="16" count="77" type="stmt"/>
+        <line num="17" count="385" type="stmt"/>
+        <line num="25" count="77" type="stmt"/>
+        <line num="28" count="3" type="stmt"/>
+        <line num="31" count="77" type="stmt"/>
+        <line num="49" count="3" type="stmt"/>
+      </file>
+      <file name="Calendar.tsx" path="/Users/quantumsoft/Downloads/MISO/proyecto-final/miso-travelhub-app/src/components/Calendar.tsx">
+        <metrics statements="28" coveredstatements="28" conditionals="20" coveredconditionals="20" methods="6" coveredmethods="6"/>
+        <line num="15" count="3" type="stmt"/>
+        <line num="30" count="3" type="stmt"/>
+        <line num="32" count="3" type="stmt"/>
+        <line num="41" count="69" type="stmt"/>
+        <line num="42" count="69" type="stmt"/>
+        <line num="44" count="69" type="stmt"/>
+        <line num="45" count="2113" type="cond" truecount="4" falsecount="0"/>
+        <line num="46" count="1338" type="stmt"/>
+        <line num="48" count="775" type="cond" truecount="2" falsecount="0"/>
+        <line num="51" count="69" type="stmt"/>
+        <line num="52" count="2113" type="cond" truecount="2" falsecount="0"/>
+        <line num="55" count="69" type="stmt"/>
+        <line num="56" count="69" type="stmt"/>
+        <line num="57" count="69" type="stmt"/>
+        <line num="59" count="69" type="stmt"/>
+        <line num="60" count="113" type="stmt"/>
+        <line num="63" count="69" type="stmt"/>
+        <line num="64" count="2113" type="stmt"/>
+        <line num="65" count="2113" type="stmt"/>
+        <line num="67" count="2113" type="stmt"/>
+        <line num="75" count="6" type="stmt"/>
+        <line num="87" count="2113" type="cond" truecount="4" falsecount="0"/>
+        <line num="88" count="347" type="stmt"/>
+        <line num="93" count="347" type="stmt"/>
+        <line num="97" count="69" type="stmt"/>
+        <line num="100" count="69" type="stmt"/>
+        <line num="115" count="483" type="stmt"/>
+        <line num="125" count="3" type="stmt"/>
+      </file>
+      <file name="CounterInput.tsx" path="/Users/quantumsoft/Downloads/MISO/proyecto-final/miso-travelhub-app/src/components/CounterInput.tsx">
+        <metrics statements="3" coveredstatements="3" conditionals="5" coveredconditionals="5" methods="1" coveredmethods="1"/>
+        <line num="14" count="3" type="stmt"/>
+        <line num="21" count="104" type="stmt"/>
+        <line num="46" count="3" type="stmt"/>
+      </file>
+    </package>
+    <package name="miso-travelhub-app.src.data">
+      <metrics statements="1" coveredstatements="1" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
+      <file name="mockData.ts" path="/Users/quantumsoft/Downloads/MISO/proyecto-final/miso-travelhub-app/src/data/mockData.ts">
+        <metrics statements="1" coveredstatements="1" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
+        <line num="10" count="3" type="stmt"/>
+      </file>
+    </package>
+    <package name="miso-travelhub-app.src.navigation">
+      <metrics statements="9" coveredstatements="5" conditionals="0" coveredconditionals="0" methods="5" coveredmethods="1"/>
+      <file name="AppNavigator.tsx" path="/Users/quantumsoft/Downloads/MISO/proyecto-final/miso-travelhub-app/src/navigation/AppNavigator.tsx">
+        <metrics statements="6" coveredstatements="3" conditionals="0" coveredconditionals="0" methods="4" coveredmethods="1"/>
+        <line num="9" count="1" type="stmt"/>
+        <line num="11" count="1" type="stmt"/>
+        <line num="12" count="1" type="stmt"/>
+        <line num="35" count="0" type="stmt"/>
+        <line num="44" count="0" type="stmt"/>
+        <line num="53" count="0" type="stmt"/>
+      </file>
+      <file name="SearchStackNavigator.tsx" path="/Users/quantumsoft/Downloads/MISO/proyecto-final/miso-travelhub-app/src/navigation/SearchStackNavigator.tsx">
+        <metrics statements="3" coveredstatements="2" conditionals="0" coveredconditionals="0" methods="1" coveredmethods="0"/>
+        <line num="16" count="1" type="stmt"/>
+        <line num="18" count="1" type="stmt"/>
+        <line num="19" count="0" type="stmt"/>
+      </file>
+    </package>
+    <package name="miso-travelhub-app.src.screens">
+      <metrics statements="58" coveredstatements="57" conditionals="15" coveredconditionals="14" methods="15" coveredmethods="14"/>
+      <file name="ReservationsScreen.tsx" path="/Users/quantumsoft/Downloads/MISO/proyecto-final/miso-travelhub-app/src/screens/ReservationsScreen.tsx">
+        <metrics statements="3" coveredstatements="3" conditionals="0" coveredconditionals="0" methods="1" coveredmethods="1"/>
+        <line num="5" count="2" type="stmt"/>
+        <line num="6" count="2" type="stmt"/>
+        <line num="14" count="2" type="stmt"/>
+      </file>
+      <file name="ResultsScreen.tsx" path="/Users/quantumsoft/Downloads/MISO/proyecto-final/miso-travelhub-app/src/screens/ResultsScreen.tsx">
+        <metrics statements="9" coveredstatements="9" conditionals="0" coveredconditionals="0" methods="4" coveredmethods="4"/>
+        <line num="12" count="2" type="stmt"/>
+        <line num="13" count="7" type="stmt"/>
+        <line num="14" count="7" type="stmt"/>
+        <line num="15" count="7" type="stmt"/>
+        <line num="17" count="7" type="stmt"/>
+        <line num="40" count="1" type="stmt"/>
+        <line num="47" count="98" type="stmt"/>
+        <line num="48" count="70" type="stmt"/>
+        <line num="56" count="2" type="stmt"/>
+      </file>
+      <file name="SearchScreen.tsx" path="/Users/quantumsoft/Downloads/MISO/proyecto-final/miso-travelhub-app/src/screens/SearchScreen.tsx">
+        <metrics statements="43" coveredstatements="42" conditionals="15" coveredconditionals="14" methods="9" coveredmethods="8"/>
+        <line num="19" count="2" type="stmt"/>
+        <line num="20" count="48" type="stmt"/>
+        <line num="22" count="48" type="stmt"/>
+        <line num="23" count="48" type="stmt"/>
+        <line num="24" count="48" type="stmt"/>
+        <line num="25" count="48" type="stmt"/>
+        <line num="26" count="48" type="stmt"/>
+        <line num="27" count="48" type="stmt"/>
+        <line num="28" count="48" type="stmt"/>
+        <line num="29" count="48" type="stmt"/>
+        <line num="31" count="48" type="stmt"/>
+        <line num="32" count="5" type="cond" truecount="5" falsecount="0"/>
+        <line num="33" count="3" type="stmt"/>
+        <line num="34" count="3" type="stmt"/>
+        <line num="35" count="2" type="cond" truecount="2" falsecount="0"/>
+        <line num="36" count="1" type="stmt"/>
+        <line num="38" count="1" type="stmt"/>
+        <line num="39" count="1" type="stmt"/>
+        <line num="43" count="48" type="stmt"/>
+        <line num="44" count="7" type="cond" truecount="2" falsecount="0"/>
+        <line num="45" count="1" type="stmt"/>
+        <line num="46" count="1" type="stmt"/>
+        <line num="48" count="6" type="stmt"/>
+        <line num="50" count="7" type="stmt"/>
+        <line num="51" count="7" type="stmt"/>
+        <line num="54" count="48" type="stmt"/>
+        <line num="55" count="13" type="cond" truecount="2" falsecount="0"/>
+        <line num="56" count="1" type="stmt"/>
+        <line num="57" count="1" type="stmt"/>
+        <line num="59" count="12" type="stmt"/>
+        <line num="61" count="13" type="stmt"/>
+        <line num="62" count="13" type="stmt"/>
+        <line num="65" count="48" type="stmt"/>
+        <line num="80" count="48" type="stmt"/>
+        <line num="81" count="2" type="stmt"/>
+        <line num="83" count="2" type="cond" truecount="3" falsecount="1"/>
+        <line num="87" count="2" type="stmt"/>
+        <line num="95" count="48" type="stmt"/>
+        <line num="125" count="1" type="stmt"/>
+        <line num="126" count="1" type="stmt"/>
+        <line num="133" count="1" type="stmt"/>
+        <line num="134" count="0" type="stmt"/>
+        <line num="144" count="2" type="stmt"/>
+      </file>
+      <file name="UserScreen.tsx" path="/Users/quantumsoft/Downloads/MISO/proyecto-final/miso-travelhub-app/src/screens/UserScreen.tsx">
+        <metrics statements="3" coveredstatements="3" conditionals="0" coveredconditionals="0" methods="1" coveredmethods="1"/>
+        <line num="5" count="2" type="stmt"/>
+        <line num="6" count="2" type="stmt"/>
+        <line num="14" count="2" type="stmt"/>
+      </file>
+    </package>
+    <package name="miso-travelhub-app.src.theme">
+      <metrics statements="1" coveredstatements="1" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
+      <file name="colors.ts" path="/Users/quantumsoft/Downloads/MISO/proyecto-final/miso-travelhub-app/src/theme/colors.ts">
+        <metrics statements="1" coveredstatements="1" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
+        <line num="1" count="9" type="stmt"/>
+      </file>
+    </package>
+  </project>
+</coverage>
