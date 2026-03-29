@@ -1,6 +1,5 @@
 import React from 'react';
 import {render, fireEvent} from '@testing-library/react-native';
-import {useNavigation} from '@react-navigation/native';
 import {SearchScreen} from '../../src/screens/SearchScreen';
 
 const mockNavigate = jest.fn();
