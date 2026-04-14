@@ -22,9 +22,10 @@ describe('SearchScreen', () => {
     expect(getByText('Buscar hospedaje')).toBeTruthy();
   });
 
-  it('renders destination input with default value', () => {
-    const {getByDisplayValue} = render(<SearchScreen />);
-    expect(getByDisplayValue('Cartagena, Colombia')).toBeTruthy();
+  it('renders destination input with empty default value', () => {
+    const {getByPlaceholderText} = render(<SearchScreen />);
+    const input = getByPlaceholderText('Ciudad, pais');
+    expect(input.props.value).toBe('');
   });
 
   it('renders destination label', () => {
@@ -48,18 +49,22 @@ describe('SearchScreen', () => {
   });
 
   it('navigates to Results when BUSCAR is pressed', () => {
-    const {getByText} = render(<SearchScreen />);
+    const {getByText, getByPlaceholderText} = render(<SearchScreen />);
+    const input = getByPlaceholderText('Ciudad, pais');
+    fireEvent.changeText(input, 'Cartagena, Colombia');
+    fireEvent.press(getByText('20'));
+    fireEvent.press(getByText('25'));
     fireEvent.press(getByText('BUSCAR'));
     expect(mockNavigate).toHaveBeenCalledWith('Results', expect.objectContaining({
       destination: 'Cartagena, Colombia',
-      adults: 2,
-      children: 0,
+      adults: 1,
+      rooms: 1,
     }));
   });
 
   it('updates destination when text changes', () => {
-    const {getByDisplayValue} = render(<SearchScreen />);
-    const input = getByDisplayValue('Cartagena, Colombia');
+    const {getByPlaceholderText, getByDisplayValue} = render(<SearchScreen />);
+    const input = getByPlaceholderText('Ciudad, pais');
     fireEvent.changeText(input, 'Bogota, Colombia');
     expect(getByDisplayValue('Bogota, Colombia')).toBeTruthy();
   });
@@ -68,9 +73,9 @@ describe('SearchScreen', () => {
     const {getAllByText} = render(<SearchScreen />);
     const plusButtons = getAllByText('+');
     fireEvent.press(plusButtons[0]);
-    // After increment, adults should be 3 (rendered somewhere in the tree)
-    const threes = getAllByText('3');
-    expect(threes.length).toBeGreaterThan(0);
+    // Adults default is 1, after increment should be 2
+    const twos = getAllByText('2');
+    expect(twos.length).toBeGreaterThan(0);
   });
 
   it('increments children counter', () => {
@@ -144,10 +149,112 @@ describe('SearchScreen', () => {
   });
 
   it('navigates with date range and shows in params', () => {
-    const {getByText} = render(<SearchScreen />);
+    const {getByText, getByPlaceholderText} = render(<SearchScreen />);
+    const input = getByPlaceholderText('Ciudad, pais');
+    fireEvent.changeText(input, 'Cartagena, Colombia');
+    fireEvent.press(getByText('20'));
+    fireEvent.press(getByText('25'));
     fireEvent.press(getByText('BUSCAR'));
     expect(mockNavigate).toHaveBeenCalledWith('Results', expect.objectContaining({
       dateRange: expect.any(String),
     }));
+  });
+
+  it('disables search button when destination is empty', () => {
+    const {getByTestId} = render(<SearchScreen />);
+    const button = getByTestId('search-button');
+    expect(button.props.accessibilityState?.disabled).toBe(true);
+  });
+
+  it('disables search button when dates are not selected', () => {
+    const {getByPlaceholderText, getByTestId} = render(<SearchScreen />);
+    const input = getByPlaceholderText('Ciudad, pais');
+    fireEvent.changeText(input, 'Cartagena, Colombia');
+    const button = getByTestId('search-button');
+    expect(button.props.accessibilityState?.disabled).toBe(true);
+  });
+
+  it('enables search button when destination and dates are valid', () => {
+    const {getByTestId, getByText, getByPlaceholderText} = render(<SearchScreen />);
+    const input = getByPlaceholderText('Ciudad, pais');
+    fireEvent.changeText(input, 'Cartagena, Colombia');
+    fireEvent.press(getByText('20'));
+    fireEvent.press(getByText('25'));
+    const button = getByTestId('search-button');
+    expect(button.props.accessibilityState?.disabled).toBeFalsy();
+  });
+
+  it('does not navigate when search button is disabled', () => {
+    const {getByText} = render(<SearchScreen />);
+    fireEvent.press(getByText('BUSCAR'));
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('renders rooms counter', () => {
+    const {getByText} = render(<SearchScreen />);
+    expect(getByText('Numero de habitaciones')).toBeTruthy();
+  });
+
+  it('increments rooms counter', () => {
+    const {getAllByText} = render(<SearchScreen />);
+    const plusButtons = getAllByText('+');
+    fireEvent.press(plusButtons[2]); // third + is rooms
+    const twos = getAllByText('2');
+    expect(twos.length).toBeGreaterThan(0);
+  });
+
+  it('passes ciudad extracted from destination', () => {
+    const {getByText, getByPlaceholderText} = render(<SearchScreen />);
+    const input = getByPlaceholderText('Ciudad, pais');
+    fireEvent.changeText(input, 'Medellin, Colombia');
+    fireEvent.press(getByText('20'));
+    fireEvent.press(getByText('25'));
+    fireEvent.press(getByText('BUSCAR'));
+    expect(mockNavigate).toHaveBeenCalledWith(
+      'Results',
+      expect.objectContaining({ciudad: 'Medellin'}),
+    );
+  });
+
+  it('passes checkin and checkout ISO dates', () => {
+    const {getByText, getByPlaceholderText} = render(<SearchScreen />);
+    const input = getByPlaceholderText('Ciudad, pais');
+    fireEvent.changeText(input, 'Bogota, Colombia');
+    fireEvent.press(getByText('20'));
+    fireEvent.press(getByText('25'));
+    fireEvent.press(getByText('BUSCAR'));
+    expect(mockNavigate).toHaveBeenCalledWith(
+      'Results',
+      expect.objectContaining({
+        checkin: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        checkout: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      }),
+    );
+  });
+
+  it('passes dateRange with month name in Spanish', () => {
+    const {getByText, getByPlaceholderText} = render(<SearchScreen />);
+    const input = getByPlaceholderText('Ciudad, pais');
+    fireEvent.changeText(input, 'Cali, Colombia');
+    fireEvent.press(getByText('20'));
+    fireEvent.press(getByText('25'));
+    fireEvent.press(getByText('BUSCAR'));
+    expect(mockNavigate).toHaveBeenCalledWith(
+      'Results',
+      expect.objectContaining({
+        dateRange: expect.stringContaining('20'),
+      }),
+    );
+    const params = mockNavigate.mock.calls[0][1];
+    expect(params.dateRange).toContain('25');
+    expect(params.dateRange).toContain(' - ');
+  });
+
+  it('disables search button with whitespace-only destination', () => {
+    const {getByPlaceholderText, getByTestId} = render(<SearchScreen />);
+    const input = getByPlaceholderText('Ciudad, pais');
+    fireEvent.changeText(input, '   ');
+    const button = getByTestId('search-button');
+    expect(button.props.accessibilityState?.disabled).toBe(true);
   });
 });

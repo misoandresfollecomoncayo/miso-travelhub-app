@@ -41,6 +41,25 @@ export const Calendar: React.FC<CalendarProps> = ({
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDayOfWeek = new Date(year, month, 1).getDay();
 
+  const today = new Date();
+  const todayYear = today.getFullYear();
+  const todayMonth = today.getMonth();
+  const todayDay = today.getDate();
+
+  const isPastMonth =
+    year < todayYear || (year === todayYear && month < todayMonth);
+  const isCurrentMonth = year === todayYear && month === todayMonth;
+
+  const isDisabled = (day: number): boolean => {
+    if (isPastMonth) {
+      return true;
+    }
+    if (isCurrentMonth && day < todayDay) {
+      return true;
+    }
+    return false;
+  };
+
   const isInRange = (day: number): boolean => {
     if (startDate === null || endDate === null) {
       return false;
@@ -63,6 +82,7 @@ export const Calendar: React.FC<CalendarProps> = ({
     for (let day = 1; day <= daysInMonth; day++) {
       const inRange = isInRange(day);
       const isEdge = isStartOrEnd(day);
+      const disabled = isDisabled(day);
 
       cells.push(
         <TouchableOpacity
@@ -72,12 +92,14 @@ export const Calendar: React.FC<CalendarProps> = ({
             inRange && styles.dayInRange,
             isEdge && styles.dayEdge,
           ]}
-          onPress={() => onSelectDate(day)}>
+          onPress={() => onSelectDate(day)}
+          disabled={disabled}>
           <Text
             style={[
               styles.dayText,
               inRange && styles.dayTextInRange,
               isEdge && styles.dayTextEdge,
+              disabled && styles.dayTextDisabled,
             ]}>
             {day}
           </Text>
@@ -85,6 +107,14 @@ export const Calendar: React.FC<CalendarProps> = ({
       );
 
       if ((firstDayOfWeek + day) % 7 === 0 || day === daysInMonth) {
+        if (day === daysInMonth) {
+          const remaining = 7 - cells.length;
+          for (let i = 0; i < remaining; i++) {
+            cells.push(
+              <View key={`trailing-${i}`} style={styles.dayCell} />,
+            );
+          }
+        }
         rows.push(
           <View key={`row-${day}`} style={styles.weekRow}>
             {cells}
@@ -100,8 +130,17 @@ export const Calendar: React.FC<CalendarProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={onPrevMonth} style={styles.navButton}>
-          <Text style={styles.navText}>{'<'}</Text>
+        <TouchableOpacity
+          onPress={onPrevMonth}
+          style={styles.navButton}
+          disabled={isCurrentMonth || isPastMonth}>
+          <Text
+            style={[
+              styles.navText,
+              (isCurrentMonth || isPastMonth) && styles.navTextDisabled,
+            ]}>
+            {'<'}
+          </Text>
         </TouchableOpacity>
         <Text style={styles.monthTitle}>
           {MONTH_NAMES[month]} {year}
@@ -138,6 +177,9 @@ const styles = StyleSheet.create({
   navText: {
     fontSize: 18,
     color: Colors.textSecondary,
+  },
+  navTextDisabled: {
+    color: Colors.grayBorder,
   },
   monthTitle: {
     fontSize: 18,
@@ -176,5 +218,8 @@ const styles = StyleSheet.create({
   dayTextEdge: {
     color: Colors.textPrimary,
     fontWeight: '700',
+  },
+  dayTextDisabled: {
+    color: Colors.grayBorder,
   },
 });

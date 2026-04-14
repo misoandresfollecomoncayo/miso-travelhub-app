@@ -74,12 +74,14 @@ miso-travelhub-app/
 
 ### Android:
 
-**Nota:** La build de Android requiere Java 17. Asegurar exportar el JAVA_HOME antes de compilar Android.
+**Nota:** La build de Android requiere Java 17. Asegurar exportar el JAVA_HOME antes de compilar Android.<br/>
+**Consultar Java Path en MacOS:** /usr/libexec/java_home -V
 
     1. export JAVA_HOME=/path/to/java17
     2. npx react-native run-android
 ### iOS:
     npx react-native run-ios
 
-### Evidencia de funcionamiento:
-![alt text](<Screen Shot 2026-03-28 at 19.40.57 PM.png>)
+# 6. Ejecutar Pruebas
+
+npx jest --coverage

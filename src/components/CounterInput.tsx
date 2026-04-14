@@ -6,7 +6,6 @@ interface CounterInputProps {
   label: string;
   value: number;
   min?: number;
-  max?: number;
   onIncrement: () => void;
   onDecrement: () => void;
 }

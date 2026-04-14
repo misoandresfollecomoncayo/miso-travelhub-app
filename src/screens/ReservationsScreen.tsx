@@ -1,13 +1,14 @@
 import React from 'react';
-import {View, Text, StyleSheet} from 'react-native';
+import {Text, StyleSheet} from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {Colors} from '../theme/colors';
 
 export const ReservationsScreen: React.FC = () => {
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <Text style={styles.title}>Reservas</Text>
       <Text style={styles.subtitle}>No tienes reservas activas</Text>
-    </View>
+    </SafeAreaView>
   );
 };
 
