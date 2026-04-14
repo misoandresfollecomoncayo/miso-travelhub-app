@@ -7,7 +7,7 @@ export const UserScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <Text style={styles.title}>Usuario</Text>
-      <Text style={styles.subtitle}>Inicia sesion para continuar</Text>
+      <Text style={styles.subtitle}>Inicia sesión para continuar</Text>
     </SafeAreaView>
   );
 };
