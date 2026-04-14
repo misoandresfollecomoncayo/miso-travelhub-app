@@ -1,10 +1,19 @@
-import React from 'react';
-import {View, Text, FlatList, TouchableOpacity, StyleSheet} from 'react-native';
+import React, {useEffect, useState} from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  ActivityIndicator,
+  StyleSheet,
+} from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {useRoute, useNavigation} from '@react-navigation/native';
 import {RouteProp} from '@react-navigation/native';
 import {Colors} from '../theme/colors';
-import {AccommodationCard} from '../components/AccommodationCard';
-import {mockAccommodations} from '../data/mockData';
+import {RoomCard} from '../components/RoomCard';
+import {Room} from '../data/room';
+import {searchRooms} from '../services/searchApi';
 import {SearchStackParamList} from '../navigation/SearchStackNavigator';
 
 type ResultsRouteProp = RouteProp<SearchStackParamList, 'Results'>;
@@ -12,13 +21,64 @@ type ResultsRouteProp = RouteProp<SearchStackParamList, 'Results'>;
 export const ResultsScreen: React.FC = () => {
   const route = useRoute<ResultsRouteProp>();
   const navigation = useNavigation();
-  const {destination, dateRange, adults} = route.params;
+  const {destination, dateRange, adults, ciudad, checkin, checkout, rooms} =
+    route.params;
+
+  const [results, setResults] = useState<Room[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const run = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await searchRooms({
+          ciudad,
+          checkin,
+          checkout,
+          group: adults,
+          rooms,
+        });
+        if (!cancelled) {
+          setResults(data);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          const message =
+            err instanceof Error ? err.message : 'Error desconocido';
+          setError(message);
+          setResults([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [ciudad, checkin, checkout, adults, rooms]);
+
+  const renderTitle = () => {
+    if (loading) {
+      return 'Buscando hospedajes...';
+    }
+    if (error) {
+      return 'No se pudieron cargar los hospedajes';
+    }
+    return `${results.length} hospedajes encontrados`;
+  };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>
-        {mockAccommodations.length} hospedajes encontrados
-      </Text>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <Text style={styles.title}>{renderTitle()}</Text>
 
       <View style={styles.summaryCard}>
         <View style={styles.summaryContent}>
@@ -31,8 +91,12 @@ export const ResultsScreen: React.FC = () => {
             {dateRange}
           </Text>
           <Text style={styles.summaryText}>
-            <Text style={styles.summaryLabel}>Numero de adultos: </Text>
+            <Text style={styles.summaryLabel}>Número de adultos: </Text>
             {adults}
+          </Text>
+          <Text style={styles.summaryText}>
+            <Text style={styles.summaryLabel}>Número de habitaciones: </Text>
+            {rooms}
           </Text>
         </View>
         <TouchableOpacity
@@ -42,14 +106,36 @@ export const ResultsScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        data={mockAccommodations}
-        keyExtractor={item => item.id}
-        renderItem={({item}) => <AccommodationCard accommodation={item} />}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      />
-    </View>
+      {loading && (
+        <View style={styles.stateContainer} testID="results-loading">
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      )}
+
+      {!loading && error && (
+        <View style={styles.stateContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+
+      {!loading && !error && results.length === 0 && (
+        <View style={styles.stateContainer}>
+          <Text style={styles.emptyText}>
+            No se encontraron hospedajes para tu búsqueda.
+          </Text>
+        </View>
+      )}
+
+      {!loading && !error && results.length > 0 && (
+        <FlatList
+          data={results}
+          keyExtractor={item => item.id}
+          renderItem={({item}) => <RoomCard room={item} />}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+    </SafeAreaView>
   );
 };
 
@@ -96,5 +182,21 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 20,
+  },
+  stateContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 14,
+    color: Colors.textPrimary,
+    textAlign: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
   },
 });

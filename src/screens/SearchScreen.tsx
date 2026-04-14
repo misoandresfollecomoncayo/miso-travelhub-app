@@ -7,6 +7,7 @@ import {
   ScrollView,
   StyleSheet,
 } from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {Calendar} from '../components/Calendar';
@@ -20,13 +21,17 @@ export const SearchScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
 
   const today = new Date();
-  const [destination, setDestination] = useState('Cartagena, Colombia');
+  const [destination, setDestination] = useState('');
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
-  const [startDate, setStartDate] = useState<number | null>(19);
-  const [endDate, setEndDate] = useState<number | null>(23);
-  const [adults, setAdults] = useState(2);
+  const [startDate, setStartDate] = useState<number | null>(null);
+  const [endDate, setEndDate] = useState<number | null>(null);
+  const [adults, setAdults] = useState(1);
   const [children, setChildren] = useState(0);
+  const [rooms, setRooms] = useState(1);
+
+  const isFormValid =
+    destination.trim().length > 0 && startDate !== null && endDate !== null;
 
   const handleSelectDate = (day: number) => {
     if (startDate === null || (startDate !== null && endDate !== null)) {
@@ -77,71 +82,103 @@ export const SearchScreen: React.FC = () => {
     'diciembre',
   ];
 
+  const formatIsoDate = (year: number, month: number, day: number): string => {
+    const mm = String(month + 1).padStart(2, '0');
+    const dd = String(day).padStart(2, '0');
+    return `${year}-${mm}-${dd}`;
+  };
+
   const handleSearch = () => {
+    if (startDate === null || endDate === null) {
+      return;
+    }
+
     const monthName = MONTH_NAMES[currentMonth];
-    const dateRange =
-      startDate && endDate
-        ? `${startDate} ${monthName} ${currentYear} - ${endDate} ${monthName} ${currentYear}`
-        : '';
+    const dateRange = `${startDate} ${monthName} ${currentYear} - ${endDate} ${monthName} ${currentYear}`;
+
+    const ciudad = destination.split(',')[0].trim();
+    const checkin = formatIsoDate(currentYear, currentMonth, startDate);
+    const checkout = formatIsoDate(currentYear, currentMonth, endDate);
 
     navigation.navigate('Results', {
       destination,
       dateRange,
       adults,
-      children,
+      ciudad,
+      checkin,
+      checkout,
+      rooms,
     });
   };
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Buscar hospedaje</Text>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}>
+        <Text style={styles.title}>Buscar hospedaje</Text>
 
-      <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>Destino:</Text>
-        <TextInput
-          style={styles.input}
-          value={destination}
-          onChangeText={setDestination}
-          placeholder="Ciudad, pais"
+        <View style={styles.inputContainer}>
+          <Text style={styles.inputLabel}>Destino:</Text>
+          <TextInput
+            style={styles.input}
+            value={destination}
+            onChangeText={setDestination}
+            placeholder="Ciudad, país"
+          />
+        </View>
+
+        <Calendar
+          year={currentYear}
+          month={currentMonth}
+          startDate={startDate}
+          endDate={endDate}
+          onSelectDate={handleSelectDate}
+          onPrevMonth={handlePrevMonth}
+          onNextMonth={handleNextMonth}
         />
-      </View>
 
-      <Calendar
-        year={currentYear}
-        month={currentMonth}
-        startDate={startDate}
-        endDate={endDate}
-        onSelectDate={handleSelectDate}
-        onPrevMonth={handlePrevMonth}
-        onNextMonth={handleNextMonth}
-      />
+        <CounterInput
+          label="Número de adultos"
+          value={adults}
+          min={1}
+          onIncrement={() => setAdults(adults + 1)}
+          onDecrement={() => setAdults(adults - 1)}
+        />
 
-      <CounterInput
-        label="Numero de adultos"
-        value={adults}
-        min={1}
-        onIncrement={() => setAdults(adults + 1)}
-        onDecrement={() => setAdults(adults - 1)}
-      />
+        <CounterInput
+          label="Número de niños"
+          value={children}
+          min={0}
+          onIncrement={() => setChildren(children + 1)}
+          onDecrement={() => setChildren(children - 1)}
+        />
 
-      <CounterInput
-        label="Numero de ninos"
-        value={children}
-        min={0}
-        onIncrement={() => setChildren(children + 1)}
-        onDecrement={() => setChildren(children - 1)}
-      />
+        <CounterInput
+          label="Número de habitaciones"
+          value={rooms}
+          min={1}
+          onIncrement={() => setRooms(rooms + 1)}
+          onDecrement={() => setRooms(rooms - 1)}
+        />
 
-      <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-        <Text style={styles.searchButtonText}>BUSCAR</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <TouchableOpacity
+          testID="search-button"
+          style={[styles.searchButton, !isFormValid && styles.searchButtonDisabled]}
+          onPress={handleSearch}
+          disabled={!isFormValid}>
+          <Text style={styles.searchButtonText}>BUSCAR</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: Colors.white,
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.white,
@@ -179,6 +216,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 24,
+  },
+  searchButtonDisabled: {
+    opacity: 0.5,
   },
   searchButtonText: {
     color: Colors.white,

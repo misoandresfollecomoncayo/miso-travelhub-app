@@ -1,14 +1,23 @@
 import React from 'react';
 import {View, Text, Image, StyleSheet} from 'react-native';
 import {Colors} from '../theme/colors';
-import {Accommodation} from '../data/mockData';
+import {Room} from '../data/room';
 
-interface AccommodationCardProps {
-  accommodation: Accommodation;
+interface RoomCardProps {
+  room: Room;
 }
 
-const formatPrice = (price: number): string => {
-  return price.toLocaleString('es-CO');
+const PLACEHOLDER_IMAGE =
+  'https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=400';
+
+const formatPrice = (price: number): string => price.toLocaleString('es-CO');
+
+const resolveImage = (images: string[]): string => {
+  const first = images[0];
+  if (first && /^https?:\/\//i.test(first)) {
+    return first;
+  }
+  return PLACEHOLDER_IMAGE;
 };
 
 const StarRating: React.FC<{rating: number}> = ({rating}) => {
@@ -25,22 +34,22 @@ const StarRating: React.FC<{rating: number}> = ({rating}) => {
   return <View style={styles.starsContainer}>{stars}</View>;
 };
 
-export const AccommodationCard: React.FC<AccommodationCardProps> = ({
-  accommodation,
-}) => {
+export const RoomCard: React.FC<RoomCardProps> = ({room}) => {
   return (
     <View style={styles.card}>
-      <Image source={{uri: accommodation.image}} style={styles.image} />
+      <Image source={{uri: resolveImage(room.imagenes)}} style={styles.image} />
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={2}>
-          {accommodation.name}
+          {room.nombreHotel}
         </Text>
         <Text style={styles.price}>
           <Text style={styles.priceLabel}>Desde: </Text>
-          COP ${formatPrice(accommodation.pricePerNight)} /noche
+          COP ${formatPrice(room.precio)} /noche
         </Text>
-        <StarRating rating={accommodation.rating} />
-        <Text style={styles.reviews}>{accommodation.reviews} resenas</Text>
+        <View style={styles.ratingRow}>
+          <StarRating rating={room.estrellas} />
+          <Text style={styles.reviews}> ({room.cantidadResenas} reseñas)</Text>
+        </View>
       </View>
     </View>
   );
@@ -78,9 +87,16 @@ const styles = StyleSheet.create({
   priceLabel: {
     fontWeight: '700',
   },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  reviews: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
   starsContainer: {
     flexDirection: 'row',
-    marginBottom: 2,
   },
   star: {
     fontSize: 18,
@@ -91,9 +107,5 @@ const styles = StyleSheet.create({
   },
   starEmpty: {
     color: Colors.starEmpty,
-  },
-  reviews: {
-    fontSize: 12,
-    color: Colors.textSecondary,
   },
 });

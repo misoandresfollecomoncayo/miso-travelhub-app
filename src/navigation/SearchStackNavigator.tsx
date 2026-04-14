@@ -9,7 +9,10 @@ export type SearchStackParamList = {
     destination: string;
     dateRange: string;
     adults: number;
-    children: number;
+    ciudad: string;
+    checkin: string;
+    checkout: string;
+    rooms: number;
   };
 };
 
