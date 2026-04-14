@@ -124,7 +124,7 @@ export const SearchScreen: React.FC = () => {
             style={styles.input}
             value={destination}
             onChangeText={setDestination}
-            placeholder="Ciudad, pais"
+            placeholder="Ciudad, país"
           />
         </View>
 
@@ -139,7 +139,7 @@ export const SearchScreen: React.FC = () => {
         />
 
         <CounterInput
-          label="Numero de adultos"
+          label="Número de adultos"
           value={adults}
           min={1}
           onIncrement={() => setAdults(adults + 1)}
@@ -147,7 +147,7 @@ export const SearchScreen: React.FC = () => {
         />
 
         <CounterInput
-          label="Numero de ninos"
+          label="Número de niños"
           value={children}
           min={0}
           onIncrement={() => setChildren(children + 1)}
@@ -155,7 +155,7 @@ export const SearchScreen: React.FC = () => {
         />
 
         <CounterInput
-          label="Numero de habitaciones"
+          label="Número de habitaciones"
           value={rooms}
           min={1}
           onIncrement={() => setRooms(rooms + 1)}

@@ -91,11 +91,11 @@ export const ResultsScreen: React.FC = () => {
             {dateRange}
           </Text>
           <Text style={styles.summaryText}>
-            <Text style={styles.summaryLabel}>Numero de adultos: </Text>
+            <Text style={styles.summaryLabel}>Número de adultos: </Text>
             {adults}
           </Text>
           <Text style={styles.summaryText}>
-            <Text style={styles.summaryLabel}>Numero de habitaciones: </Text>
+            <Text style={styles.summaryLabel}>Número de habitaciones: </Text>
             {rooms}
           </Text>
         </View>
@@ -121,7 +121,7 @@ export const ResultsScreen: React.FC = () => {
       {!loading && !error && results.length === 0 && (
         <View style={styles.stateContainer}>
           <Text style={styles.emptyText}>
-            No se encontraron hospedajes para tu busqueda.
+            No se encontraron hospedajes para tu búsqueda.
           </Text>
         </View>
       )}

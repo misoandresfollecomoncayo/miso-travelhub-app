@@ -10,6 +10,6 @@ describe('UserScreen', () => {
 
   it('renders login message', () => {
     const {getByText} = render(<UserScreen />);
-    expect(getByText('Inicia sesion para continuar')).toBeTruthy();
+    expect(getByText('Inicia sesión para continuar')).toBeTruthy();
   });
 });
