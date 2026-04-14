@@ -2,12 +2,13 @@ name: CD
 
 on:
   push:
+    branches: [main]
     tags:
       - 'v*'
 
 jobs:
-  build-android-release:
-    name: Build Android Release
+  build-android:
+    name: Build Android
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,23 +38,8 @@ jobs:
           key: gradle-${{ runner.os }}-${{ hashFiles('android/gradle/wrapper/gradle-wrapper.properties', 'android/**/*.gradle') }}
           restore-keys: gradle-${{ runner.os }}-
 
-      # Para firma en release, configurar estos secrets en GitHub:
-      #   ANDROID_KEYSTORE_BASE64  - keystore codificado en base64
-      #   ANDROID_KEYSTORE_PASSWORD
-      #   ANDROID_KEY_ALIAS
-      #   ANDROID_KEY_PASSWORD
-      - name: Decode keystore
-        if: env.ANDROID_KEYSTORE_BASE64 != ''
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
-
       - name: Build Android Release APK
         working-directory: android
-        env:
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: ./gradlew assembleRelease --no-daemon
 
       - name: Upload Release APK
@@ -63,8 +49,8 @@ jobs:
           path: android/app/build/outputs/apk/release/app-release.apk
           retention-days: 30
 
-  build-ios-release:
-    name: Build iOS Release
+  build-ios:
+    name: Build iOS
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -89,55 +75,15 @@ jobs:
         working-directory: ios
         run: pod install
 
-      # Para distribución en TestFlight/App Store, configurar estos secrets:
-      #   IOS_CERTIFICATE_BASE64      - certificado de distribución (.p12) en base64
-      #   IOS_CERTIFICATE_PASSWORD
-      #   IOS_PROVISION_PROFILE_BASE64 - provisioning profile en base64
-      #   KEYCHAIN_PASSWORD            - contraseña temporal para el keychain
-      - name: Setup iOS signing
-        if: env.IOS_CERTIFICATE_BASE64 != ''
-        env:
-          IOS_CERTIFICATE_BASE64: ${{ secrets.IOS_CERTIFICATE_BASE64 }}
-          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
-          IOS_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-        run: |
-          CERTIFICATE_PATH=$RUNNER_TEMP/certificate.p12
-          PROFILE_PATH=$RUNNER_TEMP/profile.mobileprovision
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-
-          echo "$IOS_CERTIFICATE_BASE64" | base64 --decode > "$CERTIFICATE_PATH"
-          echo "$IOS_PROVISION_PROFILE_BASE64" | base64 --decode > "$PROFILE_PATH"
-
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security import "$CERTIFICATE_PATH" -P "$IOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
-          security list-keychain -d user -s "$KEYCHAIN_PATH"
-
-          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          cp "$PROFILE_PATH" ~/Library/MobileDevice/Provisioning\ Profiles/
-
-      - name: Build iOS Release
+      - name: Build iOS
         working-directory: ios
         run: |
           xcodebuild \
             -workspace MisoTravelhubApp.xcworkspace \
             -scheme MisoTravelhubApp \
             -configuration Release \
-            -sdk iphoneos \
+            -sdk iphonesimulator \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
             -derivedDataPath build \
-            -archivePath build/MisoTravelhubApp.xcarchive \
-            archive \
+            build \
             CODE_SIGNING_ALLOWED=NO
-
-      - name: Upload iOS Archive
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-archive
-          path: ios/build/MisoTravelhubApp.xcarchive
-          retention-days: 30
-
-      - name: Cleanup keychain
-        if: always()
-        run: security delete-keychain $RUNNER_TEMP/app-signing.keychain-db 2>/dev/null || true
