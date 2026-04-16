@@ -115,8 +115,8 @@ describe('ResultsScreen', () => {
     await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
     expect(getByText('Destino: ')).toBeTruthy();
     expect(getByText('Fechas: ')).toBeTruthy();
-    expect(getByText('Numero de adultos: ')).toBeTruthy();
-    expect(getByText('Numero de habitaciones: ')).toBeTruthy();
+    expect(getByText('Número de adultos: ')).toBeTruthy();
+    expect(getByText('Número de habitaciones: ')).toBeTruthy();
   });
 
   it('renders edit button', async () => {
@@ -200,13 +200,13 @@ describe('ResultsScreen', () => {
   it('renders adults label in summary', async () => {
     const {findByText, getByText} = render(<ResultsScreen />);
     await findByText(`${mockApiRooms.length} hospedajes encontrados`);
-    expect(getByText('Numero de adultos: ')).toBeTruthy();
+    expect(getByText('Número de adultos: ')).toBeTruthy();
   });
 
   it('renders rooms label in summary', async () => {
     const {findByText, getByText} = render(<ResultsScreen />);
     await findByText(`${mockApiRooms.length} hospedajes encontrados`);
-    expect(getByText('Numero de habitaciones: ')).toBeTruthy();
+    expect(getByText('Número de habitaciones: ')).toBeTruthy();
   });
 
   it('navigates to Detail when a room card is pressed', async () => {

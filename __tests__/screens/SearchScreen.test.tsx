@@ -24,7 +24,7 @@ describe('SearchScreen', () => {
 
   it('renders destination input with empty default value', () => {
     const {getByPlaceholderText} = render(<SearchScreen />);
-    const input = getByPlaceholderText('Ciudad, pais');
+    const input = getByPlaceholderText('Ciudad, país');
     expect(input.props.value).toBe('');
   });
 
@@ -40,17 +40,17 @@ describe('SearchScreen', () => {
 
   it('renders adult counter', () => {
     const {getByText} = render(<SearchScreen />);
-    expect(getByText('Numero de adultos')).toBeTruthy();
+    expect(getByText('Número de adultos')).toBeTruthy();
   });
 
   it('renders children counter', () => {
     const {getByText} = render(<SearchScreen />);
-    expect(getByText('Numero de ninos')).toBeTruthy();
+    expect(getByText('Número de niños')).toBeTruthy();
   });
 
   it('navigates to Results when BUSCAR is pressed', () => {
     const {getByText, getByPlaceholderText} = render(<SearchScreen />);
-    const input = getByPlaceholderText('Ciudad, pais');
+    const input = getByPlaceholderText('Ciudad, país');
     fireEvent.changeText(input, 'Cartagena, Colombia');
     fireEvent.press(getByText('20'));
     fireEvent.press(getByText('25'));
@@ -64,7 +64,7 @@ describe('SearchScreen', () => {
 
   it('updates destination when text changes', () => {
     const {getByPlaceholderText, getByDisplayValue} = render(<SearchScreen />);
-    const input = getByPlaceholderText('Ciudad, pais');
+    const input = getByPlaceholderText('Ciudad, país');
     fireEvent.changeText(input, 'Bogota, Colombia');
     expect(getByDisplayValue('Bogota, Colombia')).toBeTruthy();
   });
@@ -150,7 +150,7 @@ describe('SearchScreen', () => {
 
   it('navigates with date range and shows in params', () => {
     const {getByText, getByPlaceholderText} = render(<SearchScreen />);
-    const input = getByPlaceholderText('Ciudad, pais');
+    const input = getByPlaceholderText('Ciudad, país');
     fireEvent.changeText(input, 'Cartagena, Colombia');
     fireEvent.press(getByText('20'));
     fireEvent.press(getByText('25'));
@@ -168,7 +168,7 @@ describe('SearchScreen', () => {
 
   it('disables search button when dates are not selected', () => {
     const {getByPlaceholderText, getByTestId} = render(<SearchScreen />);
-    const input = getByPlaceholderText('Ciudad, pais');
+    const input = getByPlaceholderText('Ciudad, país');
     fireEvent.changeText(input, 'Cartagena, Colombia');
     const button = getByTestId('search-button');
     expect(button.props.accessibilityState?.disabled).toBe(true);
@@ -176,7 +176,7 @@ describe('SearchScreen', () => {
 
   it('enables search button when destination and dates are valid', () => {
     const {getByTestId, getByText, getByPlaceholderText} = render(<SearchScreen />);
-    const input = getByPlaceholderText('Ciudad, pais');
+    const input = getByPlaceholderText('Ciudad, país');
     fireEvent.changeText(input, 'Cartagena, Colombia');
     fireEvent.press(getByText('20'));
     fireEvent.press(getByText('25'));
@@ -192,7 +192,7 @@ describe('SearchScreen', () => {
 
   it('renders rooms counter', () => {
     const {getByText} = render(<SearchScreen />);
-    expect(getByText('Numero de habitaciones')).toBeTruthy();
+    expect(getByText('Número de habitaciones')).toBeTruthy();
   });
 
   it('increments rooms counter', () => {
@@ -205,7 +205,7 @@ describe('SearchScreen', () => {
 
   it('passes ciudad extracted from destination', () => {
     const {getByText, getByPlaceholderText} = render(<SearchScreen />);
-    const input = getByPlaceholderText('Ciudad, pais');
+    const input = getByPlaceholderText('Ciudad, país');
     fireEvent.changeText(input, 'Medellin, Colombia');
     fireEvent.press(getByText('20'));
     fireEvent.press(getByText('25'));
@@ -218,7 +218,7 @@ describe('SearchScreen', () => {
 
   it('passes checkin and checkout ISO dates', () => {
     const {getByText, getByPlaceholderText} = render(<SearchScreen />);
-    const input = getByPlaceholderText('Ciudad, pais');
+    const input = getByPlaceholderText('Ciudad, país');
     fireEvent.changeText(input, 'Bogota, Colombia');
     fireEvent.press(getByText('20'));
     fireEvent.press(getByText('25'));
@@ -234,7 +234,7 @@ describe('SearchScreen', () => {
 
   it('passes dateRange with month name in Spanish', () => {
     const {getByText, getByPlaceholderText} = render(<SearchScreen />);
-    const input = getByPlaceholderText('Ciudad, pais');
+    const input = getByPlaceholderText('Ciudad, país');
     fireEvent.changeText(input, 'Cali, Colombia');
     fireEvent.press(getByText('20'));
     fireEvent.press(getByText('25'));
@@ -252,7 +252,7 @@ describe('SearchScreen', () => {
 
   it('disables search button with whitespace-only destination', () => {
     const {getByPlaceholderText, getByTestId} = render(<SearchScreen />);
-    const input = getByPlaceholderText('Ciudad, pais');
+    const input = getByPlaceholderText('Ciudad, país');
     fireEvent.changeText(input, '   ');
     const button = getByTestId('search-button');
     expect(button.props.accessibilityState?.disabled).toBe(true);
