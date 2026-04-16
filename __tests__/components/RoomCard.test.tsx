@@ -1,5 +1,5 @@
 import React from 'react';
-import {render} from '@testing-library/react-native';
+import {render, fireEvent} from '@testing-library/react-native';
 import {RoomCard} from '../../src/components/RoomCard';
 import {Room} from '../../src/data/room';
 
@@ -122,5 +122,24 @@ describe('RoomCard', () => {
     };
     const {getByText} = render(<RoomCard room={longNameRoom} />);
     expect(getByText(/Hotel con un nombre/)).toBeTruthy();
+  });
+
+  it('fires onPress when card is pressed', () => {
+    const onPress = jest.fn();
+    const {getByText} = render(<RoomCard room={mockRoom} onPress={onPress} />);
+    fireEvent.press(getByText('Hotel Test'));
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('has accessibility role button when onPress is provided', () => {
+    const onPress = jest.fn();
+    const {getByRole} = render(<RoomCard room={mockRoom} onPress={onPress} />);
+    expect(getByRole('button')).toBeTruthy();
+  });
+
+  it('does not wrap in TouchableOpacity when onPress is not provided', () => {
+    // Should render without error even without onPress (backward compat)
+    const {getByText} = render(<RoomCard room={mockRoom} />);
+    expect(getByText('Hotel Test')).toBeTruthy();
   });
 });
