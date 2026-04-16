@@ -2,8 +2,8 @@ import React from 'react';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {SearchStackNavigator} from './SearchStackNavigator';
+import {UserStackNavigator} from './UserStackNavigator';
 import {ReservationsScreen} from '../screens/ReservationsScreen';
-import {UserScreen} from '../screens/UserScreen';
 import {Colors} from '../theme/colors';
 
 const Tab = createBottomTabNavigator();
@@ -18,9 +18,6 @@ export const AppNavigator: React.FC = () => {
         tabBarStyle: {
           borderTopWidth: 1,
           borderTopColor: Colors.grayBorder,
-          paddingBottom: 8,
-          paddingTop: 8,
-          height: 60,
         },
         tabBarLabelStyle: {
           fontSize: 12,
@@ -47,7 +44,7 @@ export const AppNavigator: React.FC = () => {
       />
       <Tab.Screen
         name="Usuario"
-        component={UserScreen}
+        component={UserStackNavigator}
         options={{
           tabBarIcon: ({color, size}) => (
             <Icon name="person-outline" color={color} size={size} />

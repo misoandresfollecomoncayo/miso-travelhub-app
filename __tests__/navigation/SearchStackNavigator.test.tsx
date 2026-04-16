@@ -44,15 +44,55 @@ describe('SearchStackNavigator', () => {
     expect(names).toContain('Results');
   });
 
-  it('registers exactly 2 screens', () => {
+  it('registers Detail screen', () => {
     render(<SearchStackNavigator />);
-    expect(registeredScreens).toHaveLength(2);
+    const names = registeredScreens.map(s => s.name);
+    expect(names).toContain('Detail');
+  });
+
+  it('registers Reservation screen', () => {
+    render(<SearchStackNavigator />);
+    const names = registeredScreens.map(s => s.name);
+    expect(names).toContain('Reservation');
+  });
+
+  it('registers ReservationSuccess screen', () => {
+    render(<SearchStackNavigator />);
+    const names = registeredScreens.map(s => s.name);
+    expect(names).toContain('ReservationSuccess');
+  });
+
+  it('registers ReservationPolicies screen', () => {
+    render(<SearchStackNavigator />);
+    const names = registeredScreens.map(s => s.name);
+    expect(names).toContain('ReservationPolicies');
+  });
+
+  it('registers Payment screen', () => {
+    render(<SearchStackNavigator />);
+    const names = registeredScreens.map(s => s.name);
+    expect(names).toContain('Payment');
+  });
+
+  it('registers exactly 7 screens', () => {
+    render(<SearchStackNavigator />);
+    expect(registeredScreens).toHaveLength(7);
   });
 
   it('exports SearchStackParamList type with expected routes', () => {
     const searchRoute: keyof SearchStackParamList = 'Search';
     const resultsRoute: keyof SearchStackParamList = 'Results';
+    const detailRoute: keyof SearchStackParamList = 'Detail';
+    const reservationRoute: keyof SearchStackParamList = 'Reservation';
+    const successRoute: keyof SearchStackParamList = 'ReservationSuccess';
+    const policiesRoute: keyof SearchStackParamList = 'ReservationPolicies';
+    const paymentRoute: keyof SearchStackParamList = 'Payment';
     expect(searchRoute).toBe('Search');
     expect(resultsRoute).toBe('Results');
+    expect(detailRoute).toBe('Detail');
+    expect(reservationRoute).toBe('Reservation');
+    expect(successRoute).toBe('ReservationSuccess');
+    expect(policiesRoute).toBe('ReservationPolicies');
+    expect(paymentRoute).toBe('Payment');
   });
 });

@@ -3,10 +3,11 @@ import {render, fireEvent, waitFor} from '@testing-library/react-native';
 import {ResultsScreen} from '../../src/screens/ResultsScreen';
 
 const mockGoBack = jest.fn();
+const mockNavigate = jest.fn();
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
-    navigate: jest.fn(),
+    navigate: mockNavigate,
     goBack: mockGoBack,
   }),
   useRoute: () => ({
@@ -206,5 +207,36 @@ describe('ResultsScreen', () => {
     const {findByText, getByText} = render(<ResultsScreen />);
     await findByText(`${mockApiRooms.length} hospedajes encontrados`);
     expect(getByText('Numero de habitaciones: ')).toBeTruthy();
+  });
+
+  it('navigates to Detail when a room card is pressed', async () => {
+    const {findByText} = render(<ResultsScreen />);
+    const card = await findByText('Hotel Casa del Coliseo');
+    fireEvent.press(card);
+    expect(mockNavigate).toHaveBeenCalledWith(
+      'Detail',
+      expect.objectContaining({
+        room: expect.objectContaining({
+          nombreHotel: 'Hotel Casa del Coliseo',
+          precio: 123456,
+        }),
+        nights: expect.any(Number),
+        destination: 'Cartagena, Colombia',
+        dateRange: '19 enero 2026 - 23 enero 2026',
+        adults: 2,
+        checkin: '2026-01-19',
+        checkout: '2026-01-23',
+      }),
+    );
+  });
+
+  it('passes computed nights to Detail (4 days between 2026-01-19 and 2026-01-23)', async () => {
+    const {findByText} = render(<ResultsScreen />);
+    const card = await findByText('Hotel Casa del Coliseo');
+    fireEvent.press(card);
+    expect(mockNavigate).toHaveBeenCalledWith(
+      'Detail',
+      expect.objectContaining({nights: 4}),
+    );
   });
 });
