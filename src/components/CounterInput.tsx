@@ -6,6 +6,7 @@ interface CounterInputProps {
   label: string;
   value: number;
   min?: number;
+  max?: number;
   onIncrement: () => void;
   onDecrement: () => void;
 }
@@ -14,9 +15,12 @@ export const CounterInput: React.FC<CounterInputProps> = ({
   label,
   value,
   min = 0,
+  max,
   onIncrement,
   onDecrement,
 }) => {
+  const atMax = max !== undefined && value >= max;
+
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
@@ -34,8 +38,14 @@ export const CounterInput: React.FC<CounterInputProps> = ({
           </Text>
         </TouchableOpacity>
         <Text style={styles.value}>{value}</Text>
-        <TouchableOpacity style={styles.button} onPress={onIncrement}>
-          <Text style={styles.buttonText}>+</Text>
+        <TouchableOpacity
+          style={[styles.button, atMax && styles.buttonDisabled]}
+          onPress={onIncrement}
+          disabled={atMax}>
+          <Text
+            style={[styles.buttonText, atMax && styles.buttonTextDisabled]}>
+            +
+          </Text>
         </TouchableOpacity>
       </View>
     </View>

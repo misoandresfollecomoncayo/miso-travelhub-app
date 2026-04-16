@@ -73,4 +73,36 @@ describe('CounterInput', () => {
     fireEvent.press(getByText('-'));
     expect(defaultProps.onDecrement).toHaveBeenCalledTimes(1);
   });
+
+  it('disables increment button when value equals max', () => {
+    const {getByText} = render(
+      <CounterInput {...defaultProps} value={3} max={3} />,
+    );
+    fireEvent.press(getByText('+'));
+    expect(defaultProps.onIncrement).not.toHaveBeenCalled();
+  });
+
+  it('disables increment button when value exceeds max', () => {
+    const {getByText} = render(
+      <CounterInput {...defaultProps} value={5} max={3} />,
+    );
+    fireEvent.press(getByText('+'));
+    expect(defaultProps.onIncrement).not.toHaveBeenCalled();
+  });
+
+  it('allows increment when value is below max', () => {
+    const {getByText} = render(
+      <CounterInput {...defaultProps} value={2} max={5} />,
+    );
+    fireEvent.press(getByText('+'));
+    expect(defaultProps.onIncrement).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows unlimited increment when max is not provided', () => {
+    const {getByText} = render(
+      <CounterInput {...defaultProps} value={1000} />,
+    );
+    fireEvent.press(getByText('+'));
+    expect(defaultProps.onIncrement).toHaveBeenCalledTimes(1);
+  });
 });

@@ -10,6 +10,7 @@ import {
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useRoute, useNavigation} from '@react-navigation/native';
 import {RouteProp} from '@react-navigation/native';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {Colors} from '../theme/colors';
 import {RoomCard} from '../components/RoomCard';
 import {Room} from '../data/room';
@@ -17,12 +18,29 @@ import {searchRooms} from '../services/searchApi';
 import {SearchStackParamList} from '../navigation/SearchStackNavigator';
 
 type ResultsRouteProp = RouteProp<SearchStackParamList, 'Results'>;
+type ResultsNavigationProp = NativeStackNavigationProp<
+  SearchStackParamList,
+  'Results'
+>;
+
+const computeNights = (checkin: string, checkout: string): number => {
+  const start = Date.parse(checkin);
+  const end = Date.parse(checkout);
+  if (Number.isNaN(start) || Number.isNaN(end)) {
+    return 1;
+  }
+  const diffMs = end - start;
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+  return diffDays > 0 ? diffDays : 1;
+};
 
 export const ResultsScreen: React.FC = () => {
   const route = useRoute<ResultsRouteProp>();
-  const navigation = useNavigation();
+  const navigation = useNavigation<ResultsNavigationProp>();
   const {destination, dateRange, adults, ciudad, checkin, checkout, rooms} =
     route.params;
+
+  const nights = computeNights(checkin, checkout);
 
   const [results, setResults] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
@@ -130,7 +148,22 @@ export const ResultsScreen: React.FC = () => {
         <FlatList
           data={results}
           keyExtractor={item => item.id}
-          renderItem={({item}) => <RoomCard room={item} />}
+          renderItem={({item}) => (
+            <RoomCard
+              room={item}
+              onPress={() =>
+                navigation.navigate('Detail', {
+                  room: item,
+                  nights,
+                  destination,
+                  dateRange,
+                  adults,
+                  checkin,
+                  checkout,
+                })
+              }
+            />
+          )}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         />
