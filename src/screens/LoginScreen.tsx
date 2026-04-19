@@ -23,7 +23,6 @@ const TRAVELHUB_LOGO = require('../assets/logo_travelhub.png');
 const LOGIN_BACKGROUND = require('../assets/login_background.png');
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const SCREEN_HEIGHT = Dimensions.get('window').height;
 
 type LoginNavigationProp = NativeStackNavigationProp<
   UserStackParamList,
@@ -32,36 +31,30 @@ type LoginNavigationProp = NativeStackNavigationProp<
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const isValidIdentifier = (value: string): boolean => {
+const isValidEmail = (value: string): boolean => {
   const trimmed = value.trim();
-  if (trimmed.length === 0) {
-    return false;
-  }
-  if (EMAIL_REGEX.test(trimmed)) {
-    return true;
-  }
-  return /^\d{7,}$/.test(trimmed);
+  return trimmed.length > 0 && EMAIL_REGEX.test(trimmed);
 };
 
 export const LoginScreen: React.FC = () => {
   const navigation = useNavigation<LoginNavigationProp>();
   const {login, loading} = useAuth();
 
-  const [identifier, setIdentifier] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [identifierTouched, setIdentifierTouched] = useState(false);
+  const [emailTouched, setEmailTouched] = useState(false);
 
-  const identifierValid = isValidIdentifier(identifier);
+  const emailValid = isValidEmail(email);
   const passwordValid = password.length > 0;
-  const formValid = identifierValid && passwordValid;
-  const showIdentifierError = identifierTouched && !identifierValid;
+  const formValid = emailValid && passwordValid;
+  const showEmailError = emailTouched && !emailValid;
 
   const handleLogin = async () => {
     if (!formValid || loading) {
       return;
     }
     try {
-      await login(identifier.trim(), password);
+      await login(email.trim(), password);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'No se pudo iniciar sesión';
@@ -96,24 +89,24 @@ export const LoginScreen: React.FC = () => {
             <View
               style={[
                 styles.inputWrapper,
-                showIdentifierError && styles.inputWrapperError,
+                showEmailError && styles.inputWrapperError,
               ]}>
-              <Text style={styles.inputLabel}>Correo electrónico o celular:</Text>
+              <Text style={styles.inputLabel}>Correo electrónico:</Text>
               <TextInput
                 testID="login-email"
                 style={styles.input}
-                value={identifier}
-                onChangeText={setIdentifier}
-                onBlur={() => setIdentifierTouched(true)}
+                value={email}
+                onChangeText={setEmail}
+                onBlur={() => setEmailTouched(true)}
                 autoCapitalize="none"
                 autoComplete="email"
                 keyboardType="email-address"
                 editable={!loading}
               />
             </View>
-            {showIdentifierError && (
+            {showEmailError && (
               <Text style={styles.errorText} testID="login-email-error">
-                Ingresa un correo válido o un celular.
+                Ingresa un correo electrónico válido.
               </Text>
             )}
 
@@ -185,8 +178,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   hero: {
+    flex: 1,
     width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT * 0.38,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -195,23 +188,21 @@ const styles = StyleSheet.create({
     height: 116,
   },
   card: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 24,
+    padding: 24
   },
   title: {
-    fontSize: 26,
+    fontSize: 22,
     fontWeight: '800',
     color: Colors.textPrimary,
-    marginBottom: 20,
+    marginBottom: 12,
   },
   inputWrapper: {
     borderWidth: 1,
     borderColor: Colors.grayBorder,
     borderRadius: 10,
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    marginBottom: 10,
+    paddingVertical: 6,
+    marginBottom: 8,
   },
   inputWrapperError: {
     borderColor: '#D32F2F',
@@ -235,8 +226,8 @@ const styles = StyleSheet.create({
   },
   forgotLink: {
     alignSelf: 'flex-end',
-    paddingVertical: 8,
-    marginBottom: 4,
+    paddingVertical: 4,
+    marginBottom: 2,
   },
   forgotText: {
     fontSize: 14,
@@ -246,11 +237,11 @@ const styles = StyleSheet.create({
   primaryButton: {
     backgroundColor: Colors.primary,
     borderRadius: 8,
-    paddingVertical: 14,
+    paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
-    marginTop: 8,
+    minHeight: 44,
+    marginTop: 4,
   },
   primaryButtonDisabled: {
     opacity: 0.5,
@@ -259,21 +250,21 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 15,
     fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 0,
   },
   secondaryButton: {
     borderWidth: 1.5,
     borderColor: Colors.primary,
     borderRadius: 8,
-    paddingVertical: 14,
+    paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 10,
+    marginTop: 8,
   },
   secondaryButtonText: {
     color: Colors.primary,
     fontSize: 15,
     fontWeight: '700',
-    letterSpacing: 1,
+    letterSpacing: 0,
   },
 });

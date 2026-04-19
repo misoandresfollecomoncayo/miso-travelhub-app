@@ -30,6 +30,18 @@ const Harness: React.FC<HarnessProps> = ({onReady}) => {
         onPress={() => ctx.login('test@example.com', 'password')}>
         <Text>login</Text>
       </TouchableOpacity>
+      <TouchableOpacity
+        testID="register-btn"
+        onPress={() =>
+          ctx.register({
+            email: 'new@example.com',
+            username: 'newuser',
+            nombre: 'New User',
+            password: 'prueba12345',
+          })
+        }>
+        <Text>register</Text>
+      </TouchableOpacity>
       <TouchableOpacity testID="logout-btn" onPress={() => ctx.logout()}>
         <Text>logout</Text>
       </TouchableOpacity>
@@ -70,6 +82,22 @@ describe('AuthContext', () => {
   });
 
   it('login stores user in AsyncStorage and updates state', async () => {
+    globalThis.fetch = jest.fn(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            access_token: 'tok_abc',
+            user: {
+              id: 'u-1',
+              name: 'Test',
+              email: 'test@example.com',
+            },
+          }),
+      }),
+    ) as jest.Mock;
+
     const {getByTestId} = render(
       <AuthProvider>
         <Harness />
@@ -81,8 +109,8 @@ describe('AuthContext', () => {
 
     await act(async () => {
       fireEvent.press(getByTestId('login-btn'));
-      jest.advanceTimersByTime(1000);
-      // allow the promise microtasks to flush
+      // allow the promise microtasks (fetch + json + AsyncStorage) to flush
+      await Promise.resolve();
       await Promise.resolve();
       await Promise.resolve();
     });
@@ -96,6 +124,71 @@ describe('AuthContext', () => {
     expect(parsed).toEqual(
       expect.objectContaining({name: 'Test', email: 'test@example.com'}),
     );
+    (globalThis.fetch as jest.Mock).mockReset();
+  });
+
+  it('register calls API register then logs in and persists user', async () => {
+    const fetchMock = jest.fn();
+    // Primera llamada: register responde con el perfil (sin token)
+    fetchMock.mockImplementationOnce(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            id: 'u-10',
+            email: 'new@example.com',
+            username: 'newuser',
+            nombre: 'New User',
+          }),
+      }),
+    );
+    // Segunda llamada: login auto-encadenado responde con token+user
+    fetchMock.mockImplementationOnce(() =>
+      Promise.resolve({
+        ok: true,
+        status: 200,
+        json: () =>
+          Promise.resolve({
+            access_token: 'tok_register',
+            user: {
+              id: 'u-10',
+              nombre: 'New User',
+              email: 'new@example.com',
+            },
+          }),
+      }),
+    );
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+
+    const {getByTestId} = render(
+      <AuthProvider>
+        <Harness />
+      </AuthProvider>,
+    );
+    await waitFor(() =>
+      expect(getByTestId('init').props.children).toBe('ready'),
+    );
+
+    await act(async () => {
+      fireEvent.press(getByTestId('register-btn'));
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await waitFor(() =>
+      expect(getByTestId('user').props.children).toBe('New User'),
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const [registerUrl] = fetchMock.mock.calls[0];
+    const [loginUrl] = fetchMock.mock.calls[1];
+    expect(registerUrl).toContain('/api/v1/auth/register');
+    expect(loginUrl).toContain('/api/v1/auth/login');
+    const stored = await AsyncStorage.getItem(STORAGE_KEY);
+    expect(stored).not.toBeNull();
+    fetchMock.mockReset();
   });
 
   it('logout clears user and removes from AsyncStorage', async () => {
