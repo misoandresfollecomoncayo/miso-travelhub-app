@@ -61,12 +61,12 @@ describe('LoginScreen', () => {
     expect(btn.props.accessibilityState?.disabled).toBe(false);
   });
 
-  it('enables INICIAR SESIÓN when valid phone (7+ digits) + password', () => {
+  it('keeps INICIAR SESIÓN disabled when only a phone number is entered', () => {
     const {getByTestId} = render(<LoginScreen />);
     fireEvent.changeText(getByTestId('login-email'), '3001234567');
     fireEvent.changeText(getByTestId('login-password'), 'secret');
     const btn = getByTestId('login-submit-button');
-    expect(btn.props.accessibilityState?.disabled).toBe(false);
+    expect(btn.props.accessibilityState?.disabled).toBe(true);
   });
 
   it('shows email error on blur when identifier is malformed', () => {
