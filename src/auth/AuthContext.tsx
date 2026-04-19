@@ -7,7 +7,12 @@ import React, {
   useState,
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {login as apiLogin, User} from '../services/authApi';
+import {
+  login as apiLogin,
+  register as apiRegister,
+  RegisterParams,
+  User,
+} from '../services/authApi';
 
 const STORAGE_KEY = '@travelhub:user';
 
@@ -16,6 +21,7 @@ interface AuthContextValue {
   initializing: boolean;
   loading: boolean;
   login: (identifier: string, password: string) => Promise<void>;
+  register: (params: RegisterParams) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -65,14 +71,27 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({
     [],
   );
 
+  const register = useCallback(async (params: RegisterParams) => {
+    setLoading(true);
+    try {
+      await apiRegister(params);
+      // El endpoint de register no retorna token; autenticamos inmediatamente
+      const loggedUser = await apiLogin(params.email, params.password);
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(loggedUser));
+      setUser(loggedUser);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const logout = useCallback(async () => {
     await AsyncStorage.removeItem(STORAGE_KEY);
     setUser(null);
   }, []);
 
   const value = useMemo<AuthContextValue>(
-    () => ({user, initializing, loading, login, logout}),
-    [user, initializing, loading, login, logout],
+    () => ({user, initializing, loading, login, register, logout}),
+    [user, initializing, loading, login, register, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
