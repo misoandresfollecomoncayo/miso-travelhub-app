@@ -144,7 +144,7 @@ describe('authApi.register', () => {
     email: 'user@example.com',
     username: 'user123',
     nombre: 'Carlos Viajero',
-    password: 'prueba12345',
+    password: 'Prueba12345!',
     telefono: '3001234567',
     pais: 'CO',
     idioma: 'es',
@@ -177,7 +177,7 @@ describe('authApi.register', () => {
       email: 'user@example.com',
       username: 'user123',
       nombre: 'Carlos Viajero',
-      password: 'prueba12345',
+      password: 'Prueba12345!',
       telefono: '3001234567',
       pais: 'CO',
       idioma: 'es',
@@ -259,10 +259,16 @@ describe('authApi.register', () => {
     ).rejects.toThrow('Correo inválido');
   });
 
-  it('throws when password is shorter than 8 characters', async () => {
+  it('throws when password is weak (missing requirements)', async () => {
     await expect(
       register({...validParams, password: 'short'}),
-    ).rejects.toThrow('al menos 8 caracteres');
+    ).rejects.toThrow('8 caracteres, 1 letra, 1 número y 1 carácter especial');
+  });
+
+  it('throws when password lacks a special character', async () => {
+    await expect(
+      register({...validParams, password: 'Abcdefg1'}),
+    ).rejects.toThrow('carácter especial');
   });
 
   it('throws with API error detail on 4xx response', async () => {

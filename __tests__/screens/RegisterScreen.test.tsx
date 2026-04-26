@@ -31,8 +31,8 @@ const fillValidForm = (getByTestId: (id: string) => any) => {
   fireEvent.changeText(getByTestId('register-name'), 'Carlos Viajero');
   fireEvent.changeText(getByTestId('register-email'), 'carlos@example.com');
   fireEvent.changeText(getByTestId('register-phone'), '3001234567');
-  fireEvent.changeText(getByTestId('register-password'), 'prueba12345');
-  fireEvent.changeText(getByTestId('register-confirm'), 'prueba12345');
+  fireEvent.changeText(getByTestId('register-password'), 'Prueba12345!');
+  fireEvent.changeText(getByTestId('register-confirm'), 'Prueba12345!');
   fireEvent.press(getByTestId('register-terms-checkbox'));
 };
 
@@ -81,8 +81,8 @@ describe('RegisterScreen', () => {
     const {getByTestId} = render(<RegisterScreen />);
     fireEvent.changeText(getByTestId('register-name'), 'Carlos');
     fireEvent.changeText(getByTestId('register-email'), 'c@x.com');
-    fireEvent.changeText(getByTestId('register-password'), 'prueba12345');
-    fireEvent.changeText(getByTestId('register-confirm'), 'prueba12345');
+    fireEvent.changeText(getByTestId('register-password'), 'Prueba12345!');
+    fireEvent.changeText(getByTestId('register-confirm'), 'Prueba12345!');
     const btn = getByTestId('register-submit-button');
     expect(btn.props.accessibilityState?.disabled).toBe(true);
   });
@@ -96,7 +96,7 @@ describe('RegisterScreen', () => {
 
   it('shows confirm-password error when passwords do not match', () => {
     const {getByTestId} = render(<RegisterScreen />);
-    fireEvent.changeText(getByTestId('register-password'), 'prueba12345');
+    fireEvent.changeText(getByTestId('register-password'), 'Prueba12345!');
     fireEvent.changeText(getByTestId('register-confirm'), 'different123');
     expect(getByTestId('register-confirm-error')).toBeTruthy();
   });
@@ -105,19 +105,52 @@ describe('RegisterScreen', () => {
     const {getByTestId} = render(<RegisterScreen />);
     fireEvent.changeText(getByTestId('register-name'), 'Carlos');
     fireEvent.changeText(getByTestId('register-email'), 'c@x.com');
-    fireEvent.changeText(getByTestId('register-password'), 'short');
-    fireEvent.changeText(getByTestId('register-confirm'), 'short');
+    fireEvent.changeText(getByTestId('register-password'), 'Ab1!');
+    fireEvent.changeText(getByTestId('register-confirm'), 'Ab1!');
     fireEvent.press(getByTestId('register-terms-checkbox'));
     const btn = getByTestId('register-submit-button');
     expect(btn.props.accessibilityState?.disabled).toBe(true);
+  });
+
+  it('keeps button disabled when password lacks a special character', () => {
+    const {getByTestId} = render(<RegisterScreen />);
+    fireEvent.changeText(getByTestId('register-name'), 'Carlos');
+    fireEvent.changeText(getByTestId('register-email'), 'c@x.com');
+    fireEvent.changeText(getByTestId('register-password'), 'Abcdefg1');
+    fireEvent.changeText(getByTestId('register-confirm'), 'Abcdefg1');
+    fireEvent.press(getByTestId('register-terms-checkbox'));
+    const btn = getByTestId('register-submit-button');
+    expect(btn.props.accessibilityState?.disabled).toBe(true);
+  });
+
+  it('keeps button disabled when password lacks a digit', () => {
+    const {getByTestId} = render(<RegisterScreen />);
+    fireEvent.changeText(getByTestId('register-name'), 'Carlos');
+    fireEvent.changeText(getByTestId('register-email'), 'c@x.com');
+    fireEvent.changeText(getByTestId('register-password'), 'Abcdefgh!');
+    fireEvent.changeText(getByTestId('register-confirm'), 'Abcdefgh!');
+    fireEvent.press(getByTestId('register-terms-checkbox'));
+    const btn = getByTestId('register-submit-button');
+    expect(btn.props.accessibilityState?.disabled).toBe(true);
+  });
+
+  it('renders password strength checklist while typing', () => {
+    const {getByTestId, queryByTestId} = render(<RegisterScreen />);
+    expect(queryByTestId('register-password-checks')).toBeNull();
+    fireEvent.changeText(getByTestId('register-password'), 'abc');
+    expect(getByTestId('register-password-checks')).toBeTruthy();
+    expect(getByTestId('password-check-length')).toBeTruthy();
+    expect(getByTestId('password-check-letter')).toBeTruthy();
+    expect(getByTestId('password-check-digit')).toBeTruthy();
+    expect(getByTestId('password-check-special')).toBeTruthy();
   });
 
   it('keeps button disabled when email format is invalid', () => {
     const {getByTestId} = render(<RegisterScreen />);
     fireEvent.changeText(getByTestId('register-name'), 'Carlos');
     fireEvent.changeText(getByTestId('register-email'), 'not-an-email');
-    fireEvent.changeText(getByTestId('register-password'), 'prueba12345');
-    fireEvent.changeText(getByTestId('register-confirm'), 'prueba12345');
+    fireEvent.changeText(getByTestId('register-password'), 'Prueba12345!');
+    fireEvent.changeText(getByTestId('register-confirm'), 'Prueba12345!');
     fireEvent.press(getByTestId('register-terms-checkbox'));
     const btn = getByTestId('register-submit-button');
     expect(btn.props.accessibilityState?.disabled).toBe(true);
@@ -128,8 +161,8 @@ describe('RegisterScreen', () => {
     fireEvent.changeText(getByTestId('register-name'), '  Carlos Viajero  ');
     fireEvent.changeText(getByTestId('register-email'), '  carlos@example.com  ');
     fireEvent.changeText(getByTestId('register-phone'), '  3001234567  ');
-    fireEvent.changeText(getByTestId('register-password'), 'prueba12345');
-    fireEvent.changeText(getByTestId('register-confirm'), 'prueba12345');
+    fireEvent.changeText(getByTestId('register-password'), 'Prueba12345!');
+    fireEvent.changeText(getByTestId('register-confirm'), 'Prueba12345!');
     fireEvent.press(getByTestId('register-terms-checkbox'));
     fireEvent.press(getByTestId('register-submit-button'));
     await waitFor(() => expect(mockRegister).toHaveBeenCalledTimes(1));
@@ -137,7 +170,7 @@ describe('RegisterScreen', () => {
       email: 'carlos@example.com',
       username: 'Carlos Viajero',
       nombre: 'Carlos Viajero',
-      password: 'prueba12345',
+      password: 'Prueba12345!',
       telefono: '3001234567',
       pais: 'CO',
       idioma: 'es',
@@ -149,8 +182,8 @@ describe('RegisterScreen', () => {
     const {getByTestId} = render(<RegisterScreen />);
     fireEvent.changeText(getByTestId('register-name'), 'Carlos');
     fireEvent.changeText(getByTestId('register-email'), 'c@x.com');
-    fireEvent.changeText(getByTestId('register-password'), 'prueba12345');
-    fireEvent.changeText(getByTestId('register-confirm'), 'prueba12345');
+    fireEvent.changeText(getByTestId('register-password'), 'Prueba12345!');
+    fireEvent.changeText(getByTestId('register-confirm'), 'Prueba12345!');
     fireEvent.press(getByTestId('register-terms-checkbox'));
     fireEvent.press(getByTestId('register-submit-button'));
     await waitFor(() => expect(mockRegister).toHaveBeenCalled());
