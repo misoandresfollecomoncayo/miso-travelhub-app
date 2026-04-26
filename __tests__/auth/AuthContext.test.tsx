@@ -37,7 +37,7 @@ const Harness: React.FC<HarnessProps> = ({onReady}) => {
             email: 'new@example.com',
             username: 'newuser',
             nombre: 'New User',
-            password: 'prueba12345',
+            password: 'Prueba12345!',
           })
         }>
         <Text>register</Text>

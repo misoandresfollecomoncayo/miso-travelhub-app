@@ -1,3 +1,5 @@
+import {isStrongPassword} from '../utils/password';
+
 export interface User {
   id: string;
   name: string;
@@ -137,8 +139,10 @@ export const register = async (params: RegisterParams): Promise<User> => {
   if (!EMAIL_REGEX.test(email)) {
     throw new Error('Correo inválido');
   }
-  if (password.length < 8) {
-    throw new Error('La contraseña debe tener al menos 8 caracteres');
+  if (!isStrongPassword(password)) {
+    throw new Error(
+      'La contraseña debe tener al menos 8 caracteres, 1 letra, 1 número y 1 carácter especial',
+    );
   }
 
   const body: Record<string, string> = {
