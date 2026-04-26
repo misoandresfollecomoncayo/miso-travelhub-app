@@ -19,6 +19,11 @@ import {Colors} from '../theme/colors';
 import {UserStackParamList} from '../navigation/UserStackNavigator';
 import {useAuth} from '../auth/AuthContext';
 import {SelectField, SelectOption} from '../components/SelectField';
+import {
+  getPasswordChecks,
+  isStrongPassword,
+  MIN_PASSWORD_LENGTH,
+} from '../utils/password';
 
 type RegisterNavigationProp = NativeStackNavigationProp<
   UserStackParamList,
@@ -26,7 +31,6 @@ type RegisterNavigationProp = NativeStackNavigationProp<
 >;
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MIN_PASSWORD = 8;
 
 const COUNTRY_OPTIONS: SelectOption[] = [
   {value: 'CO', label: 'Colombia'},
@@ -53,6 +57,26 @@ const CURRENCY_OPTIONS: SelectOption[] = [
   {value: 'USD', label: 'USD — Dólar estadounidense'},
 ];
 
+const CHECK_OK_COLOR = '#2E7D32';
+const CHECK_KO_COLOR = '#9E9E9E';
+
+interface PasswordCheckProps {
+  ok: boolean;
+  label: string;
+  testID?: string;
+}
+
+const PasswordCheck: React.FC<PasswordCheckProps> = ({ok, label, testID}) => (
+  <View style={styles.checkRow} testID={testID}>
+    <Icon
+      name={ok ? 'checkmark-circle' : 'ellipse-outline'}
+      size={16}
+      color={ok ? CHECK_OK_COLOR : CHECK_KO_COLOR}
+    />
+    <Text style={[styles.checkText, ok && styles.checkTextOk]}>{label}</Text>
+  </View>
+);
+
 export const RegisterScreen: React.FC = () => {
   const navigation = useNavigation<RegisterNavigationProp>();
   const {register, loading} = useAuth();
@@ -69,7 +93,8 @@ export const RegisterScreen: React.FC = () => {
 
   const nombreValid = fullName.trim().length > 0;
   const emailValid = EMAIL_REGEX.test(email.trim());
-  const passwordValid = password.length >= MIN_PASSWORD;
+  const passwordChecks = getPasswordChecks(password);
+  const passwordValid = isStrongPassword(password);
   const confirmValid = confirm === password && confirm.length > 0;
 
   const formValid =
@@ -198,9 +223,7 @@ export const RegisterScreen: React.FC = () => {
           />
 
           <View style={styles.inputWrapper}>
-            <Text style={styles.inputLabel}>
-              Contraseña (mínimo {MIN_PASSWORD} caracteres):
-            </Text>
+            <Text style={styles.inputLabel}>Contraseña:</Text>
             <TextInput
               testID="register-password"
               style={styles.input}
@@ -211,6 +234,32 @@ export const RegisterScreen: React.FC = () => {
               editable={!loading}
             />
           </View>
+          {password.length > 0 && (
+            <View
+              style={styles.passwordChecks}
+              testID="register-password-checks">
+              <PasswordCheck
+                testID="password-check-length"
+                ok={passwordChecks.length}
+                label={`Al menos ${MIN_PASSWORD_LENGTH} caracteres`}
+              />
+              <PasswordCheck
+                testID="password-check-letter"
+                ok={passwordChecks.letter}
+                label="Al menos 1 letra"
+              />
+              <PasswordCheck
+                testID="password-check-digit"
+                ok={passwordChecks.digit}
+                label="Al menos 1 número"
+              />
+              <PasswordCheck
+                testID="password-check-special"
+                ok={passwordChecks.special}
+                label="Al menos 1 carácter especial"
+              />
+            </View>
+          )}
 
           <View style={styles.inputWrapper}>
             <Text style={styles.inputLabel}>Confirmar contraseña:</Text>
@@ -349,6 +398,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#D32F2F',
     paddingHorizontal: 4,
+  },
+  passwordChecks: {
+    marginTop: -4,
+    marginBottom: 10,
+    paddingHorizontal: 4,
+  },
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 2,
+  },
+  checkText: {
+    marginLeft: 6,
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  checkTextOk: {
+    color: '#2E7D32',
   },
   termsRow: {
     flexDirection: 'row',
