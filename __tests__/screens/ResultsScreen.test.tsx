@@ -218,7 +218,8 @@ describe('ResultsScreen', () => {
       expect.objectContaining({
         room: expect.objectContaining({
           nombreHotel: 'Hotel Casa del Coliseo',
-          precio: 123456,
+          // 123456 EUR * 4200 (TRM EUR→COP) = 518515200 COP
+          precio: 518515200,
         }),
         nights: expect.any(Number),
         destination: 'Cartagena, Colombia',

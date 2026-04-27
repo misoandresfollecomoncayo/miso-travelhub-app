@@ -6,7 +6,6 @@ import {DetailScreen} from '../screens/DetailScreen';
 import {ReservationScreen} from '../screens/ReservationScreen';
 import {ReservationSuccessScreen} from '../screens/ReservationSuccessScreen';
 import {ReservationPoliciesScreen} from '../screens/ReservationPoliciesScreen';
-import {PaymentScreen} from '../screens/PaymentScreen';
 import {Room} from '../data/room';
 
 export type SearchStackParamList = {
@@ -48,14 +47,6 @@ export type SearchStackParamList = {
     confirmationCode: string;
   };
   ReservationPolicies: undefined;
-  Payment: {
-    nombreHotel: string;
-    destination: string;
-    dateRange: string;
-    nights: number;
-    adults: number;
-    total: number;
-  };
 };
 
 const Stack = createNativeStackNavigator<SearchStackParamList>();
@@ -75,7 +66,6 @@ export const SearchStackNavigator: React.FC = () => {
         name="ReservationPolicies"
         component={ReservationPoliciesScreen}
       />
-      <Stack.Screen name="Payment" component={PaymentScreen} />
     </Stack.Navigator>
   );
 };
