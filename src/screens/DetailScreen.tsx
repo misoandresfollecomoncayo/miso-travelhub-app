@@ -37,8 +37,16 @@ const capitalize = (value: string): string =>
 export const DetailScreen: React.FC = () => {
   const route = useRoute<DetailRouteProp>();
   const navigation = useNavigation<DetailNavigationProp>();
-  const {room, nights, destination, dateRange, adults, checkin, checkout} =
-    route.params;
+  const {
+    room,
+    nights,
+    destination,
+    dateRange,
+    adults,
+    checkin,
+    checkout,
+    viewOnly,
+  } = route.params;
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const screenWidth = useRef(Dimensions.get('window').width).current;
@@ -304,30 +312,32 @@ export const DetailScreen: React.FC = () => {
         </TouchableOpacity>
       </SafeAreaView>
 
-      <View style={styles.footerSafeArea}>
-        <View style={styles.footer}>
-          <View style={styles.priceContainer}>
-            <Text style={styles.totalPrice}>
-              COP ${formatPrice(totalPrice)}
-            </Text>
-            <Text style={styles.nightsLabel}>
-              Por{' '}
-              <Text style={styles.nightsLink}>
-                {nights} {nightsLabel}
+      {!viewOnly && (
+        <View style={styles.footerSafeArea} testID="detail-footer">
+          <View style={styles.footer}>
+            <View style={styles.priceContainer}>
+              <Text style={styles.totalPrice}>
+                COP ${formatPrice(totalPrice)}
               </Text>
-            </Text>
+              <Text style={styles.nightsLabel}>
+                Por{' '}
+                <Text style={styles.nightsLink}>
+                  {nights} {nightsLabel}
+                </Text>
+              </Text>
+            </View>
+            <TouchableOpacity
+              testID="detail-reserve-button"
+              style={styles.reserveButton}
+              onPress={handleReservar}
+              accessibilityRole="button"
+              accessibilityLabel="Reservar hospedaje"
+              activeOpacity={0.85}>
+              <Text style={styles.reserveButtonText}>RESERVAR</Text>
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            testID="detail-reserve-button"
-            style={styles.reserveButton}
-            onPress={handleReservar}
-            accessibilityRole="button"
-            accessibilityLabel="Reservar hospedaje"
-            activeOpacity={0.85}>
-            <Text style={styles.reserveButtonText}>RESERVAR</Text>
-          </TouchableOpacity>
         </View>
-      </View>
+      )}
     </View>
   );
 };
