@@ -3,7 +3,7 @@ import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {SearchStackNavigator} from './SearchStackNavigator';
 import {UserStackNavigator} from './UserStackNavigator';
-import {ReservationsScreen} from '../screens/ReservationsScreen';
+import {ReservationsStackNavigator} from './ReservationsStackNavigator';
 import {Colors} from '../theme/colors';
 
 const Tab = createBottomTabNavigator();
@@ -35,7 +35,7 @@ export const AppNavigator: React.FC = () => {
       />
       <Tab.Screen
         name="Reservas"
-        component={ReservationsScreen}
+        component={ReservationsStackNavigator}
         options={{
           tabBarIcon: ({color, size}) => (
             <Icon name="calendar-outline" color={color} size={size} />
