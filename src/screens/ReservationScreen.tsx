@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Alert,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -18,8 +19,10 @@ import {Colors} from '../theme/colors';
 import {SearchStackParamList} from '../navigation/SearchStackNavigator';
 import {Calendar} from '../components/Calendar';
 import {CounterInput} from '../components/CounterInput';
-import {formatPrice} from '../utils/format';
+import {formatPrice, generateConfirmationCode} from '../utils/format';
 import {resolveImage} from '../utils/images';
+import {useAuth} from '../auth/AuthContext';
+import {bookRoom} from '../services/bookingApi';
 
 type ReservationRouteProp = RouteProp<SearchStackParamList, 'Reservation'>;
 type ReservationNavigationProp = NativeStackNavigationProp<
@@ -85,12 +88,14 @@ const formatDateRange = (checkin: string, checkout: string): string => {
 export const ReservationScreen: React.FC = () => {
   const route = useRoute<ReservationRouteProp>();
   const navigation = useNavigation<ReservationNavigationProp>();
+  const {user} = useAuth();
   const {room, destination, checkin: initialCheckin, checkout: initialCheckout} =
     route.params;
 
   const maxCapacity = Math.max(1, room.capacidadMaxima || 1);
 
   const [policiesAccepted, setPoliciesAccepted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [checkinIso, setCheckinIso] = useState<string>(initialCheckin);
   const [checkoutIso, setCheckoutIso] = useState<string>(initialCheckout);
   const [adultsCount, setAdultsCount] = useState<number>(
@@ -189,26 +194,54 @@ export const ReservationScreen: React.FC = () => {
     setAdultsCount(prev => Math.max(1, prev - 1));
   };
 
+  const submitBooking = async () => {
+    if (!user || !user.token) {
+      Alert.alert(
+        'Inicia sesión',
+        'Debes iniciar sesión para crear una reserva.',
+      );
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const booking = await bookRoom({
+        habitacionId: room.id,
+        checkin: checkinIso,
+        checkout: checkoutIso,
+        numHuespedes: adultsCount,
+        token: user.token,
+      });
+      navigation.navigate('ReservationSuccess', {
+        nombreHotel: room.nombreHotel,
+        destination,
+        dateRange,
+        nights,
+        adults: adultsCount,
+        total,
+        confirmationCode: booking.id || generateConfirmationCode(),
+      });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'No se pudo crear la reserva';
+      Alert.alert('Error', message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handlePagar = () => {
-    if (!policiesAccepted) {
+    if (!policiesAccepted || submitting) {
       return;
     }
     Alert.alert(
       'Confirmar reserva',
-      `¿Deseas confirmar el pago de COP $${formatPrice(total)}?`,
+      `¿Deseas confirmar la reserva?`,
       [
         {text: 'Cancelar', style: 'cancel'},
         {
           text: 'Confirmar',
           onPress: () => {
-            navigation.navigate('Payment', {
-              nombreHotel: room.nombreHotel,
-              destination,
-              dateRange,
-              nights,
-              adults: adultsCount,
-              total,
-            });
+            submitBooking();
           },
         },
       ],
@@ -369,15 +402,22 @@ export const ReservationScreen: React.FC = () => {
           testID="reservation-pay-button"
           style={[
             styles.payButton,
-            !policiesAccepted && styles.payButtonDisabled,
+            (!policiesAccepted || submitting) && styles.payButtonDisabled,
           ]}
           onPress={handlePagar}
-          disabled={!policiesAccepted}
+          disabled={!policiesAccepted || submitting}
           accessibilityRole="button"
           accessibilityLabel="Pagar reserva"
-          accessibilityState={{disabled: !policiesAccepted}}
+          accessibilityState={{disabled: !policiesAccepted || submitting}}
           activeOpacity={0.85}>
-          <Text style={styles.payButtonText}>PAGAR RESERVA</Text>
+          {submitting ? (
+            <ActivityIndicator
+              color={Colors.white}
+              testID="reservation-loading"
+            />
+          ) : (
+            <Text style={styles.payButtonText}>RESERVAR</Text>
+          )}
         </TouchableOpacity>
       </View>
 

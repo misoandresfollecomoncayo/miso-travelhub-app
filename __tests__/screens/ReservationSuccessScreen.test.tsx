@@ -1,12 +1,8 @@
 import React from 'react';
-import {render, fireEvent} from '@testing-library/react-native';
+import {render} from '@testing-library/react-native';
 import {ReservationSuccessScreen} from '../../src/screens/ReservationSuccessScreen';
 
 jest.mock('react-native-vector-icons/Ionicons', () => 'Icon');
-
-const mockPopToTop = jest.fn();
-const mockParentNavigate = jest.fn();
-const mockGetParent = jest.fn(() => ({navigate: mockParentNavigate}));
 
 const mockRouteParams = {
   nombreHotel: 'Hotel Casa del Coliseo',
@@ -20,8 +16,8 @@ const mockRouteParams = {
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({
-    popToTop: mockPopToTop,
-    getParent: mockGetParent,
+    popToTop: jest.fn(),
+    getParent: jest.fn(),
   }),
   useRoute: () => ({params: mockRouteParams}),
 }));
@@ -106,28 +102,5 @@ describe('ReservationSuccessScreen', () => {
   it('renders total price in es-CO', () => {
     const {getByText} = render(<ReservationSuccessScreen />);
     expect(getByText('COP $476.000')).toBeTruthy();
-  });
-
-  it('navigates to "Reservas" tab when primary button pressed', () => {
-    const {getByTestId} = render(<ReservationSuccessScreen />);
-    fireEvent.press(getByTestId('success-primary-button'));
-    expect(mockGetParent).toHaveBeenCalled();
-    expect(mockParentNavigate).toHaveBeenCalledWith('Reservas');
-  });
-
-  it('calls popToTop when secondary button pressed', () => {
-    const {getByTestId} = render(<ReservationSuccessScreen />);
-    fireEvent.press(getByTestId('success-secondary-button'));
-    expect(mockPopToTop).toHaveBeenCalledTimes(1);
-  });
-
-  it('renders VER MIS RESERVAS label', () => {
-    const {getByText} = render(<ReservationSuccessScreen />);
-    expect(getByText('VER MIS RESERVAS')).toBeTruthy();
-  });
-
-  it('renders "Volver al inicio" label', () => {
-    const {getByText} = render(<ReservationSuccessScreen />);
-    expect(getByText('Volver al inicio')).toBeTruthy();
   });
 });

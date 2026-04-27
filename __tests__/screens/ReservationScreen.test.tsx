@@ -1,10 +1,28 @@
 import React from 'react';
 import {Alert} from 'react-native';
-import {render, fireEvent} from '@testing-library/react-native';
+import {render, fireEvent, waitFor} from '@testing-library/react-native';
 import {ReservationScreen} from '../../src/screens/ReservationScreen';
 import {Room} from '../../src/data/room';
+import {bookRoom} from '../../src/services/bookingApi';
 
 jest.mock('react-native-vector-icons/Ionicons', () => 'Icon');
+
+jest.mock('../../src/services/bookingApi', () => ({
+  bookRoom: jest.fn(),
+}));
+const mockBookRoom = bookRoom as jest.Mock;
+
+let mockAuthUser: {token: string} | null = {token: 'tok_user'};
+jest.mock('../../src/auth/AuthContext', () => ({
+  useAuth: () => ({
+    user: mockAuthUser ? {id: 'u-1', name: 'U', email: 'u@x.com', token: mockAuthUser.token} : null,
+    initializing: false,
+    loading: false,
+    login: jest.fn(),
+    register: jest.fn(),
+    logout: jest.fn(),
+  }),
+}));
 
 const mockGoBack = jest.fn();
 const mockNavigate = jest.fn();
@@ -48,6 +66,9 @@ jest.mock('@react-navigation/native', () => ({
 describe('ReservationScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockBookRoom.mockReset();
+    mockBookRoom.mockResolvedValue({id: 'booking-123'});
+    mockAuthUser = {token: 'tok_user'};
   });
 
   it('renders title "Reservar"', () => {
@@ -111,9 +132,9 @@ describe('ReservationScreen', () => {
     expect(getByText(/Los precios incluyen IVA/)).toBeTruthy();
   });
 
-  it('renders PAGAR RESERVA button', () => {
+  it('renders RESERVAR button', () => {
     const {getByText} = render(<ReservationScreen />);
-    expect(getByText('PAGAR RESERVA')).toBeTruthy();
+    expect(getByText('RESERVAR')).toBeTruthy();
   });
 
   it('shows Alert when PAGAR RESERVA is pressed after accepting policies', () => {
@@ -123,7 +144,7 @@ describe('ReservationScreen', () => {
     fireEvent.press(getByTestId('reservation-pay-button'));
     expect(alertSpy).toHaveBeenCalledWith(
       'Confirmar reserva',
-      expect.stringContaining('COP $476.000'),
+      expect.stringContaining('confirmar la reserva'),
       expect.arrayContaining([
         expect.objectContaining({text: 'Cancelar'}),
         expect.objectContaining({text: 'Confirmar'}),
@@ -132,7 +153,7 @@ describe('ReservationScreen', () => {
     alertSpy.mockRestore();
   });
 
-  it('navigates to Payment when Alert "Confirmar" is pressed', () => {
+  it('calls bookRoom with token + room data when Alert "Confirmar" is pressed', async () => {
     const alertSpy = jest
       .spyOn(Alert, 'alert')
       .mockImplementation((_title, _msg, buttons) => {
@@ -142,20 +163,86 @@ describe('ReservationScreen', () => {
     const {getByTestId} = render(<ReservationScreen />);
     fireEvent.press(getByTestId('reservation-consent-checkbox'));
     fireEvent.press(getByTestId('reservation-pay-button'));
-    expect(mockNavigate).toHaveBeenCalledWith(
-      'Payment',
-      expect.objectContaining({
-        nombreHotel: 'Hotel Casa del Coliseo',
-        destination: 'Cartagena, Colombia',
-        dateRange: '19 marzo 2099 - 23 marzo 2099',
-        nights: 4,
-        adults: 2,
-        total: 476000,
-      }),
+    await waitFor(() => expect(mockBookRoom).toHaveBeenCalledTimes(1));
+    expect(mockBookRoom).toHaveBeenCalledWith({
+      habitacionId: 'room-1',
+      checkin: '2099-03-19',
+      checkout: '2099-03-23',
+      numHuespedes: 2,
+      token: 'tok_user',
+    });
+    alertSpy.mockRestore();
+  });
+
+  it('navigates to ReservationSuccess after a successful booking', async () => {
+    const alertSpy = jest
+      .spyOn(Alert, 'alert')
+      .mockImplementation((_title, _msg, buttons) => {
+        const confirmButton = buttons?.find(b => b.text === 'Confirmar');
+        confirmButton?.onPress?.();
+      });
+    mockBookRoom.mockResolvedValueOnce({id: 'booking-xyz'});
+    const {getByTestId} = render(<ReservationScreen />);
+    fireEvent.press(getByTestId('reservation-consent-checkbox'));
+    fireEvent.press(getByTestId('reservation-pay-button'));
+    await waitFor(() =>
+      expect(mockNavigate).toHaveBeenCalledWith(
+        'ReservationSuccess',
+        expect.objectContaining({
+          nombreHotel: 'Hotel Casa del Coliseo',
+          destination: 'Cartagena, Colombia',
+          dateRange: '19 marzo 2099 - 23 marzo 2099',
+          nights: 4,
+          adults: 2,
+          total: 476000,
+          confirmationCode: 'booking-xyz',
+        }),
+      ),
     );
-    // Ya no se genera confirmationCode en Reservation
-    const params = mockNavigate.mock.calls[0][1];
-    expect(params.confirmationCode).toBeUndefined();
+    alertSpy.mockRestore();
+  });
+
+  it('shows Alert when bookRoom fails', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    alertSpy
+      .mockImplementationOnce((_title, _msg, buttons) => {
+        const confirmButton = buttons?.find(b => b.text === 'Confirmar');
+        confirmButton?.onPress?.();
+      })
+      .mockImplementation(() => {});
+    mockBookRoom.mockRejectedValueOnce(new Error('Habitación no disponible'));
+    const {getByTestId} = render(<ReservationScreen />);
+    fireEvent.press(getByTestId('reservation-consent-checkbox'));
+    fireEvent.press(getByTestId('reservation-pay-button'));
+    await waitFor(() =>
+      expect(alertSpy).toHaveBeenCalledWith(
+        'Error',
+        'Habitación no disponible',
+      ),
+    );
+    expect(mockNavigate).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
+  });
+
+  it('shows Alert and does not call bookRoom when user is not logged in', async () => {
+    mockAuthUser = null;
+    const alertSpy = jest.spyOn(Alert, 'alert');
+    alertSpy
+      .mockImplementationOnce((_title, _msg, buttons) => {
+        const confirmButton = buttons?.find(b => b.text === 'Confirmar');
+        confirmButton?.onPress?.();
+      })
+      .mockImplementation(() => {});
+    const {getByTestId} = render(<ReservationScreen />);
+    fireEvent.press(getByTestId('reservation-consent-checkbox'));
+    fireEvent.press(getByTestId('reservation-pay-button'));
+    await waitFor(() =>
+      expect(alertSpy).toHaveBeenCalledWith(
+        'Inicia sesión',
+        expect.stringContaining('iniciar sesión'),
+      ),
+    );
+    expect(mockBookRoom).not.toHaveBeenCalled();
     alertSpy.mockRestore();
   });
 
