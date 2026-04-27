@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
+import QRCode from 'react-native-qrcode-svg';
 import {useRoute, useNavigation} from '@react-navigation/native';
 import {RouteProp} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
@@ -205,6 +206,9 @@ export const BookingDetailScreen: React.FC = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
+        <View style={styles.qrContainer} testID="booking-detail-qr">
+          <QRCode value={booking.id || 'unknown'} size={130} />
+        </View>
         <Field
           testID="booking-detail-id"
           label="Id reserva:"
@@ -292,6 +296,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     paddingBottom: 24,
+  },
+  qrContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    marginBottom: 8,
   },
   field: {
     borderWidth: 1,

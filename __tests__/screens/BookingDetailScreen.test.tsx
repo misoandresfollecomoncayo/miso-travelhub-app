@@ -78,6 +78,14 @@ describe('BookingDetailScreen', () => {
     expect(getByText('COP $493.824')).toBeTruthy();
   });
 
+  it('renders the QR code with the booking id as value', () => {
+    const {getByTestId, UNSAFE_getByType} = render(<BookingDetailScreen />);
+    expect(getByTestId('booking-detail-qr')).toBeTruthy();
+    // The mocked QRCode is the string component 'QRCode' — find it by type.
+    const qr = UNSAFE_getByType('QRCode' as unknown as React.ComponentType);
+    expect(qr.props.value).toBe('BKG-00001');
+  });
+
   it('renders all expected field testIDs', () => {
     const {getByTestId} = render(<BookingDetailScreen />);
     expect(getByTestId('booking-detail-id')).toBeTruthy();
