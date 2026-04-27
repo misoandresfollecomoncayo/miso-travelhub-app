@@ -1,5 +1,38 @@
 jest.mock('react-native-vector-icons/Ionicons', () => 'Icon');
 
+jest.mock('react-native-qrcode-svg', () => 'QRCode');
+
+jest.mock('react-native-svg', () => {
+  const React = require('react');
+  const Mock = (name) => (props) => React.createElement(name, props, props.children);
+  return {
+    __esModule: true,
+    default: Mock('Svg'),
+    Svg: Mock('Svg'),
+    Circle: Mock('Circle'),
+    Ellipse: Mock('Ellipse'),
+    G: Mock('G'),
+    Text: Mock('SvgText'),
+    TSpan: Mock('TSpan'),
+    TextPath: Mock('TextPath'),
+    Path: Mock('Path'),
+    Polygon: Mock('Polygon'),
+    Polyline: Mock('Polyline'),
+    Line: Mock('Line'),
+    Rect: Mock('Rect'),
+    Use: Mock('Use'),
+    Image: Mock('SvgImage'),
+    Symbol: Mock('Symbol'),
+    Defs: Mock('Defs'),
+    LinearGradient: Mock('LinearGradient'),
+    RadialGradient: Mock('RadialGradient'),
+    Stop: Mock('Stop'),
+    ClipPath: Mock('ClipPath'),
+    Pattern: Mock('Pattern'),
+    Mask: Mock('Mask'),
+  };
+});
+
 jest.mock('@react-native-async-storage/async-storage', () => {
   let store = {};
   return {
