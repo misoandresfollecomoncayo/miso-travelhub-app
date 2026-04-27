@@ -1,5 +1,25 @@
 jest.mock('react-native-vector-icons/Ionicons', () => 'Icon');
 
+jest.mock('@react-native-firebase/messaging', () => {
+  const messagingMock = {
+    requestPermission: jest.fn(() => Promise.resolve(1)),
+    getToken: jest.fn(() => Promise.resolve('fake-fcm-token')),
+    deleteToken: jest.fn(() => Promise.resolve()),
+    onTokenRefresh: jest.fn(() => () => {}),
+    onMessage: jest.fn(() => () => {}),
+    setBackgroundMessageHandler: jest.fn(),
+  };
+  const factory = jest.fn(() => messagingMock);
+  factory.AuthorizationStatus = {
+    NOT_DETERMINED: -1,
+    DENIED: 0,
+    AUTHORIZED: 1,
+    PROVISIONAL: 2,
+    EPHEMERAL: 4,
+  };
+  return {__esModule: true, default: factory};
+});
+
 jest.mock('react-native-qrcode-svg', () => 'QRCode');
 
 jest.mock('react-native-svg', () => {

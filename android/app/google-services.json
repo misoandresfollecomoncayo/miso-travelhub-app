@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "955120190520",
+    "project_id": "miso-travelhub-app",
+    "storage_bucket": "miso-travelhub-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:955120190520:android:6b00cf60746a0c7bb4d2cd",
+        "android_client_info": {
+          "package_name": "com.misotravelhubapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBwW8rS9U_x29gjWHBpSFGi1qv7SJS1E1E"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

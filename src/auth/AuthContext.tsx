@@ -13,8 +13,40 @@ import {
   RegisterParams,
   User,
 } from '../services/authApi';
+import {
+  requestNotificationPermission,
+  getFcmToken,
+  deleteFcmToken,
+} from '../services/notifications';
+import {
+  registerDeviceToken,
+  unregisterDeviceToken,
+} from '../services/notificationsApi';
 
 const STORAGE_KEY = '@travelhub:user';
+const FCM_TOKEN_KEY = '@travelhub:fcmToken';
+
+const registerPushAfterAuth = async (
+  jwt: string | undefined,
+): Promise<void> => {
+  if (!jwt) {
+    return;
+  }
+  try {
+    const granted = await requestNotificationPermission();
+    if (!granted) {
+      return;
+    }
+    const fcmToken = await getFcmToken();
+    if (!fcmToken) {
+      return;
+    }
+    await AsyncStorage.setItem(FCM_TOKEN_KEY, fcmToken);
+    await registerDeviceToken({fcmToken, token: jwt});
+  } catch {
+    // No bloqueamos el login por errores de push
+  }
+};
 
 interface AuthContextValue {
   user: User | null;
@@ -64,6 +96,7 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({
         const loggedUser = await apiLogin(identifier, password);
         await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(loggedUser));
         setUser(loggedUser);
+        await registerPushAfterAuth(loggedUser.token);
       } finally {
         setLoading(false);
       }
@@ -79,15 +112,26 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({
       const loggedUser = await apiLogin(params.email, params.password);
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(loggedUser));
       setUser(loggedUser);
+      await registerPushAfterAuth(loggedUser.token);
     } finally {
       setLoading(false);
     }
   }, []);
 
   const logout = useCallback(async () => {
+    try {
+      const fcmToken = await AsyncStorage.getItem(FCM_TOKEN_KEY);
+      if (fcmToken && user?.token) {
+        await unregisterDeviceToken({fcmToken, token: user.token});
+      }
+      await deleteFcmToken();
+      await AsyncStorage.removeItem(FCM_TOKEN_KEY);
+    } catch {
+      // El logout local debe completarse aunque falle el cleanup de push
+    }
     await AsyncStorage.removeItem(STORAGE_KEY);
     setUser(null);
-  }, []);
+  }, [user]);
 
   const value = useMemo<AuthContextValue>(
     () => ({user, initializing, loading, login, register, logout}),
