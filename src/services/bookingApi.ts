@@ -1,5 +1,8 @@
+import {convertToCop} from '../utils/currency';
+
 const API_BASE_URL = 'https://apitravelhub.site';
 const BOOKING_ENDPOINT = `${API_BASE_URL}/api/v1/booking/booking_room`;
+const GET_BOOKINGS_ENDPOINT = `${API_BASE_URL}/api/v1/booking/get_bookings`;
 
 export interface BookRoomParams {
   habitacionId: string;
@@ -18,9 +21,32 @@ export interface Booking {
   raw: unknown;
 }
 
+export interface BookingListItem {
+  id: string;
+  nombreHotel: string;
+  descripcion: string;
+  ciudad: string;
+  pais: string;
+  direccion: string;
+  estrellas: number;
+  estado: string;
+  fechaCheckIn: string;
+  fechaCheckOut: string;
+  numHuespedes: number;
+  imagenes: string[];
+  amenidades: string[];
+  tipoHabitacion: string;
+  tamanoHabitacion: string;
+  tipoCama: string[];
+  distancia: string;
+  acceso: string;
+  total: number; // ya convertido a COP
+}
+
 const parseErrorMessage = (payload: unknown): string => {
   if (payload && typeof payload === 'object') {
-    const detail = (payload as {detail?: unknown}).detail;
+    const obj = payload as {detail?: unknown; message?: unknown};
+    const {detail} = obj;
     if (typeof detail === 'string') {
       return detail;
     }
@@ -30,8 +56,11 @@ const parseErrorMessage = (payload: unknown): string => {
         return first.msg;
       }
     }
+    if (typeof obj.message === 'string') {
+      return obj.message;
+    }
   }
-  return 'No se pudo crear la reserva';
+  return 'Ocurrió un error inesperado';
 };
 
 const toString = (value: unknown, fallback = ''): string => {
@@ -130,4 +159,83 @@ export const bookRoom = async (params: BookRoomParams): Promise<Booking> => {
     checkout,
     numHuespedes,
   });
+};
+
+const toStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map(item => (typeof item === 'string' ? item : String(item)))
+    .filter(item => item.length > 0);
+};
+
+const normalizeBookingListItem = (
+  payload: unknown,
+  index: number,
+): BookingListItem => {
+  const obj = (payload ?? {}) as Record<string, unknown>;
+  const totalRaw = toNumber(obj.total);
+  // Los precios del backend vienen en EUR; convertimos a COP para la UI.
+  // Si el item incluye explícitamente moneda, se respeta.
+  const moneda = toString(obj.moneda, 'EUR');
+  return {
+    id: toString(obj.id, `booking-${index}`),
+    nombreHotel: toString(obj.nombreHotel, 'Hospedaje'),
+    descripcion: toString(obj.descripcion),
+    ciudad: toString(obj.ciudad),
+    pais: toString(obj.pais),
+    direccion: toString(obj.direccion),
+    estrellas: toNumber(obj.estrellas),
+    estado: toString(obj.estado, 'PENDIENTE'),
+    fechaCheckIn: toString(obj.fechaCheckIn),
+    fechaCheckOut: toString(obj.fechaCheckOut),
+    numHuespedes: toNumber(obj.numHuespedes, 1),
+    imagenes: toStringArray(obj.imagenes),
+    amenidades: toStringArray(obj.amenidades),
+    tipoHabitacion: toString(obj.tipo_habitacion ?? obj.tipoHabitacion),
+    tamanoHabitacion: toString(obj.tamano_habitacion ?? obj.tamanoHabitacion),
+    tipoCama: toStringArray(obj.tipo_cama ?? obj.tipoCama),
+    distancia: toString(obj.distancia),
+    acceso: toString(obj.acceso),
+    total: convertToCop(totalRaw, moneda),
+  };
+};
+
+export const getBookings = async (token: string): Promise<BookingListItem[]> => {
+  if (!token) {
+    throw new Error('Debes iniciar sesión para ver tus reservas');
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(GET_BOOKINGS_ENDPOINT, {
+      method: 'GET',
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+  } catch {
+    throw new Error('No se pudo conectar con el servidor');
+  }
+
+  let payload: unknown = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (response.status === 401 || response.status === 403) {
+    throw new Error('Tu sesión ha expirado. Inicia sesión nuevamente.');
+  }
+  if (!response.ok) {
+    throw new Error(parseErrorMessage(payload));
+  }
+
+  if (!Array.isArray(payload)) {
+    return [];
+  }
+  return payload.map((item, index) => normalizeBookingListItem(item, index));
 };

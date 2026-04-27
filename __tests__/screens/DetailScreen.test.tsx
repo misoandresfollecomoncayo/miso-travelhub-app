@@ -150,6 +150,17 @@ describe('DetailScreen', () => {
     );
   });
 
+  it('hides the footer (RESERVAR button) when viewOnly is true', () => {
+    mockRouteParams = {
+      ...mockRouteParams,
+      viewOnly: true,
+    };
+    const {queryByTestId, queryByText} = render(<DetailScreen />);
+    expect(queryByTestId('detail-footer')).toBeNull();
+    expect(queryByTestId('detail-reserve-button')).toBeNull();
+    expect(queryByText('RESERVAR')).toBeNull();
+  });
+
   it('calls goBack when back button is pressed', () => {
     const {getByTestId} = render(<DetailScreen />);
     fireEvent.press(getByTestId('detail-back-button'));

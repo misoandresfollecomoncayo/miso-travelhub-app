@@ -27,6 +27,7 @@ export type SearchStackParamList = {
     adults: number;
     checkin: string;
     checkout: string;
+    viewOnly?: boolean;
   };
   Reservation: {
     room: Room;
