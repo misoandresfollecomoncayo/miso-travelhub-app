@@ -1,4 +1,5 @@
 import {Room} from '../data/room';
+import {convertToCop} from '../utils/currency';
 
 const API_BASE_URL = 'https://apitravelhub.site';
 
@@ -45,7 +46,9 @@ const toStringArray = (value: unknown): string[] => {
 const normalizeRoom = (item: any, index: number): Room => ({
   id: toString(item?.id, String(index)),
   nombreHotel: toString(item?.nombre_hotel, 'Hospedaje'),
-  precio: toNumber(item?.precio),
+  // El backend devuelve precios mayoritariamente en EUR; la app trabaja
+  // siempre en COP. Convertimos en el límite del servicio.
+  precio: convertToCop(toNumber(item?.precio), toString(item?.moneda, 'EUR')),
   direccion: toString(item?.direccion),
   capacidadMaxima: toNumber(item?.capacidad_maxima),
   distancia: toString(item?.distancia),

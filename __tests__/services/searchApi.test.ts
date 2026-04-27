@@ -107,7 +107,8 @@ describe('searchRooms', () => {
         {
           id: 'abc-123',
           nombre_hotel: 'Hotel Test',
-          precio: 150000,
+          precio: 90,
+          moneda: 'EUR',
           direccion: 'Calle 10',
           capacidad_maxima: 3,
           distancia: '2 km',
@@ -130,7 +131,8 @@ describe('searchRooms', () => {
     const room = rooms[0];
     expect(room.id).toBe('abc-123');
     expect(room.nombreHotel).toBe('Hotel Test');
-    expect(room.precio).toBe(150000);
+    // 90 EUR * 4200 (TRM) = 378000 COP
+    expect(room.precio).toBe(378000);
     expect(room.direccion).toBe('Calle 10');
     expect(room.capacidadMaxima).toBe(3);
     expect(room.distancia).toBe('2 km');
@@ -200,12 +202,30 @@ describe('searchRooms', () => {
 
   // --- toNumber edge cases ---
 
-  it('converts string precio to number', async () => {
+  it('converts string precio to number (and applies EUR→COP)', async () => {
     (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
-      makeResponse([{precio: '250000'}]),
+      makeResponse([{precio: '85', moneda: 'EUR'}]),
+    );
+    const rooms = await searchRooms(defaultParams);
+    // 85 EUR * 4200 = 357000 COP
+    expect(rooms[0].precio).toBe(357000);
+  });
+
+  it('preserves precio as-is when API returns moneda COP', async () => {
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      makeResponse([{precio: 250000, moneda: 'COP'}]),
     );
     const rooms = await searchRooms(defaultParams);
     expect(rooms[0].precio).toBe(250000);
+  });
+
+  it('treats missing moneda as EUR (converts to COP)', async () => {
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      makeResponse([{precio: 100}]),
+    );
+    const rooms = await searchRooms(defaultParams);
+    // 100 EUR * 4200 = 420000 COP
+    expect(rooms[0].precio).toBe(420000);
   });
 
   it('falls back to 0 for NaN precio', async () => {

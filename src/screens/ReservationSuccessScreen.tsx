@@ -1,25 +1,19 @@
 import React from 'react';
-import {View, Text, ScrollView, TouchableOpacity, StyleSheet} from 'react-native';
+import {View, Text, ScrollView, StyleSheet} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
-import {useRoute, useNavigation} from '@react-navigation/native';
+import {useRoute} from '@react-navigation/native';
 import {RouteProp} from '@react-navigation/native';
-import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {Colors} from '../theme/colors';
 import {SearchStackParamList} from '../navigation/SearchStackNavigator';
 import {formatPrice} from '../utils/format';
 
 type SuccessRouteProp = RouteProp<SearchStackParamList, 'ReservationSuccess'>;
-type SuccessNavigationProp = NativeStackNavigationProp<
-  SearchStackParamList,
-  'ReservationSuccess'
->;
 
 const SUCCESS_COLOR = '#2E7D32';
 
 export const ReservationSuccessScreen: React.FC = () => {
   const route = useRoute<SuccessRouteProp>();
-  const navigation = useNavigation<SuccessNavigationProp>();
   const {
     nombreHotel,
     destination,
@@ -32,14 +26,6 @@ export const ReservationSuccessScreen: React.FC = () => {
 
   const nightsLabel = nights === 1 ? 'noche' : 'noches';
   const adultsLabel = adults === 1 ? 'adulto' : 'adultos';
-
-  const handleVerReservas = () => {
-    navigation.getParent()?.navigate('Reservas' as never);
-  };
-
-  const handleVolverInicio = () => {
-    navigation.popToTop();
-  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -103,26 +89,6 @@ export const ReservationSuccessScreen: React.FC = () => {
         </View>
       </ScrollView>
 
-      <View style={styles.actions}>
-        <TouchableOpacity
-          testID="success-primary-button"
-          style={styles.primaryButton}
-          onPress={handleVerReservas}
-          accessibilityRole="button"
-          accessibilityLabel="Ver mis reservas"
-          activeOpacity={0.85}>
-          <Text style={styles.primaryButtonText}>VER MIS RESERVAS</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          testID="success-secondary-button"
-          style={styles.secondaryButton}
-          onPress={handleVolverInicio}
-          accessibilityRole="button"
-          accessibilityLabel="Volver al inicio"
-          hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
-          <Text style={styles.secondaryButtonText}>Volver al inicio</Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 };
@@ -208,33 +174,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: Colors.textPrimary,
-  },
-  actions: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 4,
-    backgroundColor: Colors.white,
-  },
-  primaryButton: {
-    backgroundColor: Colors.primary,
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  primaryButtonText: {
-    color: Colors.white,
-    fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: 1,
-  },
-  secondaryButton: {
-    paddingVertical: 6,
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
-    color: Colors.primary,
-    fontSize: 14,
-    fontWeight: '600',
   },
 });

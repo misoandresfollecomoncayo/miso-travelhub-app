@@ -68,15 +68,15 @@ describe('SearchStackNavigator', () => {
     expect(names).toContain('ReservationPolicies');
   });
 
-  it('registers Payment screen', () => {
+  it('does not register a Payment screen', () => {
     render(<SearchStackNavigator />);
     const names = registeredScreens.map(s => s.name);
-    expect(names).toContain('Payment');
+    expect(names).not.toContain('Payment');
   });
 
-  it('registers exactly 7 screens', () => {
+  it('registers exactly 6 screens', () => {
     render(<SearchStackNavigator />);
-    expect(registeredScreens).toHaveLength(7);
+    expect(registeredScreens).toHaveLength(6);
   });
 
   it('exports SearchStackParamList type with expected routes', () => {
@@ -86,13 +86,11 @@ describe('SearchStackNavigator', () => {
     const reservationRoute: keyof SearchStackParamList = 'Reservation';
     const successRoute: keyof SearchStackParamList = 'ReservationSuccess';
     const policiesRoute: keyof SearchStackParamList = 'ReservationPolicies';
-    const paymentRoute: keyof SearchStackParamList = 'Payment';
     expect(searchRoute).toBe('Search');
     expect(resultsRoute).toBe('Results');
     expect(detailRoute).toBe('Detail');
     expect(reservationRoute).toBe('Reservation');
     expect(successRoute).toBe('ReservationSuccess');
     expect(policiesRoute).toBe('ReservationPolicies');
-    expect(paymentRoute).toBe('Payment');
   });
 });

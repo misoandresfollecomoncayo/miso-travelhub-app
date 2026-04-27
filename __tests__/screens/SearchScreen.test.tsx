@@ -52,6 +52,7 @@ describe('SearchScreen', () => {
     const {getByText, getByPlaceholderText} = render(<SearchScreen />);
     const input = getByPlaceholderText('Ciudad, país');
     fireEvent.changeText(input, 'Cartagena, Colombia');
+    fireEvent.press(getByText('>'));
     fireEvent.press(getByText('20'));
     fireEvent.press(getByText('25'));
     fireEvent.press(getByText('BUSCAR'));
@@ -152,6 +153,7 @@ describe('SearchScreen', () => {
     const {getByText, getByPlaceholderText} = render(<SearchScreen />);
     const input = getByPlaceholderText('Ciudad, país');
     fireEvent.changeText(input, 'Cartagena, Colombia');
+    fireEvent.press(getByText('>'));
     fireEvent.press(getByText('20'));
     fireEvent.press(getByText('25'));
     fireEvent.press(getByText('BUSCAR'));
@@ -178,6 +180,7 @@ describe('SearchScreen', () => {
     const {getByTestId, getByText, getByPlaceholderText} = render(<SearchScreen />);
     const input = getByPlaceholderText('Ciudad, país');
     fireEvent.changeText(input, 'Cartagena, Colombia');
+    fireEvent.press(getByText('>'));
     fireEvent.press(getByText('20'));
     fireEvent.press(getByText('25'));
     const button = getByTestId('search-button');
@@ -207,6 +210,7 @@ describe('SearchScreen', () => {
     const {getByText, getByPlaceholderText} = render(<SearchScreen />);
     const input = getByPlaceholderText('Ciudad, país');
     fireEvent.changeText(input, 'Medellin, Colombia');
+    fireEvent.press(getByText('>'));
     fireEvent.press(getByText('20'));
     fireEvent.press(getByText('25'));
     fireEvent.press(getByText('BUSCAR'));
@@ -220,6 +224,7 @@ describe('SearchScreen', () => {
     const {getByText, getByPlaceholderText} = render(<SearchScreen />);
     const input = getByPlaceholderText('Ciudad, país');
     fireEvent.changeText(input, 'Bogota, Colombia');
+    fireEvent.press(getByText('>'));
     fireEvent.press(getByText('20'));
     fireEvent.press(getByText('25'));
     fireEvent.press(getByText('BUSCAR'));
@@ -236,6 +241,7 @@ describe('SearchScreen', () => {
     const {getByText, getByPlaceholderText} = render(<SearchScreen />);
     const input = getByPlaceholderText('Ciudad, país');
     fireEvent.changeText(input, 'Cali, Colombia');
+    fireEvent.press(getByText('>'));
     fireEvent.press(getByText('20'));
     fireEvent.press(getByText('25'));
     fireEvent.press(getByText('BUSCAR'));
