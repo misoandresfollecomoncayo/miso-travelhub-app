@@ -27,9 +27,13 @@ describe('A11y — Search screen', () => {
   });
 
   it('the search button is reachable by its accessibilityLabel', async () => {
-    // El botón principal está al final del scroll; toExist es suficiente
-    // para validar que el árbol de accesibilidad lo incluye con su label.
-    await expect(element(by.label('BUSCAR'))).toExist();
+    // `by.label('BUSCAR')` en Android matchea por contentDescription O por
+    // texto de TextView, así que cae el ReactViewGroup del botón
+    // (accessibilityLabel="BUSCAR") *y* el `<Text>BUSCAR</Text>` interno —
+    // ambiguo. Disambiguamos con atIndex(0): el primer match es el botón,
+    // que es lo que valida la prueba (presencia en el árbol de a11y).
+    // toExist en vez de toBeVisible porque el botón está al final del scroll.
+    await expect(element(by.label('BUSCAR')).atIndex(0)).toExist();
   });
 
   it('the counter increment buttons have accessible labels', async () => {
