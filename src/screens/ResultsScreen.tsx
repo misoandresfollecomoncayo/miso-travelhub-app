@@ -15,7 +15,41 @@ import {Colors} from '../theme/colors';
 import {RoomCard} from '../components/RoomCard';
 import {Room} from '../data/room';
 import {searchRooms} from '../services/searchApi';
+import {useT} from '../i18n/useT';
+import {TranslationKey} from '../i18n/translations';
+import {useAuth} from '../auth/AuthContext';
+import {usePreferences} from '../preferences/PreferencesContext';
 import {SearchStackParamList} from '../navigation/SearchStackNavigator';
+
+/**
+ * Mapea el mensaje crudo del backend (o un código sentinela del servicio) a
+ * un string localizado para mostrar al usuario.
+ */
+const mapErrorToMessage = (
+  raw: string,
+  t: (key: TranslationKey, vars?: Record<string, string | number>) => string,
+): string => {
+  if (raw === 'NETWORK_ERROR') {
+    return t('results.errorNetwork');
+  }
+  if (raw === 'UNKNOWN_ERROR' || raw.startsWith('HTTP_')) {
+    return t('results.errorGeneric');
+  }
+  const lower = raw.toLowerCase();
+  if (lower.includes('check-in') && lower.includes('lower than today')) {
+    return t('results.errorCheckinPast');
+  }
+  if (
+    lower.includes('check-out') &&
+    (lower.includes('lower') || lower.includes('before'))
+  ) {
+    return t('results.errorCheckoutBeforeCheckin');
+  }
+  // Si no reconocemos el mensaje, devolvemos el detalle crudo del backend —
+  // suele ser corto y en inglés, pero al menos da contexto al usuario y al
+  // equipo en bug reports en lugar de "Error 400".
+  return raw;
+};
 
 type ResultsRouteProp = RouteProp<SearchStackParamList, 'Results'>;
 type ResultsNavigationProp = NativeStackNavigationProp<
@@ -37,8 +71,13 @@ const computeNights = (checkin: string, checkout: string): number => {
 export const ResultsScreen: React.FC = () => {
   const route = useRoute<ResultsRouteProp>();
   const navigation = useNavigation<ResultsNavigationProp>();
+  const t = useT();
+  const {user} = useAuth();
+  const {currency} = usePreferences();
   const {destination, dateRange, adults, ciudad, checkin, checkout, rooms} =
     route.params;
+  // Sin sesión: COP. Con sesión: la moneda configurada por el usuario.
+  const queryCurrency = user ? currency : 'COP';
 
   const nights = computeNights(checkin, checkout);
 
@@ -59,14 +98,18 @@ export const ResultsScreen: React.FC = () => {
           checkout,
           group: adults,
           rooms,
+          moneda: queryCurrency,
         });
         if (!cancelled) {
           setResults(data);
         }
       } catch (err) {
         if (!cancelled) {
+          // Guardamos el mensaje crudo (o sentinela 'UNKNOWN_ERROR'); se
+          // traduce/mapea en el render con `mapErrorToMessage` para evitar
+          // refetches al cambiar idioma.
           const message =
-            err instanceof Error ? err.message : 'Error desconocido';
+            err instanceof Error ? err.message : 'UNKNOWN_ERROR';
           setError(message);
           setResults([]);
         }
@@ -82,16 +125,16 @@ export const ResultsScreen: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [ciudad, checkin, checkout, adults, rooms]);
+  }, [ciudad, checkin, checkout, adults, rooms, queryCurrency]);
 
   const renderTitle = () => {
     if (loading) {
-      return 'Buscando hospedajes...';
+      return t('results.searching');
     }
     if (error) {
-      return 'No se pudieron cargar los hospedajes';
+      return t('results.errorTitle');
     }
-    return `${results.length} hospedajes encontrados`;
+    return t('results.foundCount', {n: results.length});
   };
 
   return (
@@ -101,19 +144,19 @@ export const ResultsScreen: React.FC = () => {
       <View style={styles.summaryCard}>
         <View style={styles.summaryContent}>
           <Text style={styles.summaryText}>
-            <Text style={styles.summaryLabel}>Destino: </Text>
+            <Text style={styles.summaryLabel}>{t('results.summaryDestination')}</Text>
             {destination}
           </Text>
           <Text style={styles.summaryText}>
-            <Text style={styles.summaryLabel}>Fechas: </Text>
+            <Text style={styles.summaryLabel}>{t('results.summaryDates')}</Text>
             {dateRange}
           </Text>
           <Text style={styles.summaryText}>
-            <Text style={styles.summaryLabel}>Número de adultos: </Text>
+            <Text style={styles.summaryLabel}>{t('results.summaryAdults')}</Text>
             {adults}
           </Text>
           <Text style={styles.summaryText}>
-            <Text style={styles.summaryLabel}>Número de habitaciones: </Text>
+            <Text style={styles.summaryLabel}>{t('results.summaryRooms')}</Text>
             {rooms}
           </Text>
         </View>
@@ -132,15 +175,13 @@ export const ResultsScreen: React.FC = () => {
 
       {!loading && error && (
         <View style={styles.stateContainer}>
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={styles.errorText}>{mapErrorToMessage(error, t)}</Text>
         </View>
       )}
 
       {!loading && !error && results.length === 0 && (
         <View style={styles.stateContainer}>
-          <Text style={styles.emptyText}>
-            No se encontraron hospedajes para tu búsqueda.
-          </Text>
+          <Text style={styles.emptyText}>{t('results.empty')}</Text>
         </View>
       )}
 

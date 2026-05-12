@@ -6,14 +6,18 @@ import {useRoute} from '@react-navigation/native';
 import {RouteProp} from '@react-navigation/native';
 import {Colors} from '../theme/colors';
 import {SearchStackParamList} from '../navigation/SearchStackNavigator';
-import {formatPrice} from '../utils/format';
+import {formatAmount} from '../utils/currency';
+import {useT} from '../i18n/useT';
 
 type SuccessRouteProp = RouteProp<SearchStackParamList, 'ReservationSuccess'>;
 
-const SUCCESS_COLOR = '#2E7D32';
+// Naranja para indicar "pendiente de confirmación del hotel" — la reserva
+// fue enviada pero todavía no está confirmada (estado PENDIENTE).
+const PENDING_COLOR = '#F57C00';
 
 export const ReservationSuccessScreen: React.FC = () => {
   const route = useRoute<SuccessRouteProp>();
+  const t = useT();
   const {
     nombreHotel,
     destination,
@@ -21,11 +25,12 @@ export const ReservationSuccessScreen: React.FC = () => {
     nights,
     adults,
     total,
+    moneda,
     confirmationCode,
   } = route.params;
 
-  const nightsLabel = nights === 1 ? 'noche' : 'noches';
-  const adultsLabel = adults === 1 ? 'adulto' : 'adultos';
+  const nightsLabel = nights === 1 ? t('success.nightSingular') : t('success.nightPlural');
+  const adultsLabel = adults === 1 ? t('success.adultSingular') : t('success.adultPlural');
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -33,17 +38,15 @@ export const ReservationSuccessScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
         <View style={styles.iconWrapper} testID="success-icon">
-          <Icon name="checkmark-circle" size={96} color={SUCCESS_COLOR} />
+          <Icon name="checkmark-circle" size={96} color={PENDING_COLOR} />
         </View>
 
-        <Text style={styles.title}>¡Reserva confirmada!</Text>
-        <Text style={styles.subtitle}>
-          Tu reserva ha sido registrada con éxito.
-        </Text>
+        <Text style={styles.title}>{t('success.title')}</Text>
+        <Text style={styles.subtitle}>{t('success.subtitle')}</Text>
 
         <View style={styles.summaryCard}>
           <View style={styles.codeRow}>
-            <Text style={styles.codeLabel}>Código de confirmación</Text>
+            <Text style={styles.codeLabel}>{t('success.confirmationCode')}</Text>
             <Text style={styles.codeValue} testID="success-code">
               {confirmationCode}
             </Text>
@@ -52,29 +55,29 @@ export const ReservationSuccessScreen: React.FC = () => {
           <View style={styles.divider} />
 
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Destino</Text>
+            <Text style={styles.summaryLabel}>{t('success.destination')}</Text>
             <Text style={styles.summaryValue}>{destination}</Text>
           </View>
 
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Hospedaje</Text>
+            <Text style={styles.summaryLabel}>{t('success.lodging')}</Text>
             <Text style={styles.summaryValue}>{nombreHotel}</Text>
           </View>
 
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Fechas</Text>
+            <Text style={styles.summaryLabel}>{t('success.dates')}</Text>
             <Text style={styles.summaryValue}>{dateRange}</Text>
           </View>
 
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Noches</Text>
+            <Text style={styles.summaryLabel}>{t('success.nightsLabel')}</Text>
             <Text style={styles.summaryValue}>
               {nights} {nightsLabel}
             </Text>
           </View>
 
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Adultos</Text>
+            <Text style={styles.summaryLabel}>{t('success.adultsLabel')}</Text>
             <Text style={styles.summaryValue} testID="success-adults">
               {adults} {adultsLabel}
             </Text>
@@ -83,8 +86,8 @@ export const ReservationSuccessScreen: React.FC = () => {
           <View style={styles.divider} />
 
           <View style={styles.summaryRow}>
-            <Text style={styles.totalLabel}>Total pagado</Text>
-            <Text style={styles.totalValue}>COP ${formatPrice(total)}</Text>
+            <Text style={styles.totalLabel}>{t('success.totalPaid')}</Text>
+            <Text style={styles.totalValue}>{formatAmount(total, moneda)}</Text>
           </View>
         </View>
       </ScrollView>

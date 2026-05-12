@@ -1,4 +1,5 @@
 import {bookRoom, getBookings} from '../../src/services/bookingApi';
+import {API_BASE_URL} from '../../src/config/api';
 
 const makeResponse = (body: unknown, ok = true, status = 200) =>
   Promise.resolve({
@@ -12,6 +13,10 @@ const validParams = {
   checkin: '2099-05-19',
   checkout: '2099-05-23',
   numHuespedes: 2,
+  subtotal: 300,
+  impuestos: 57,
+  total: 357,
+  moneda: 'EUR',
   token: 'tok_abc',
 };
 
@@ -30,15 +35,13 @@ describe('bookingApi.bookRoom', () => {
     );
     await bookRoom(validParams);
     const [url, options] = (globalThis.fetch as jest.Mock).mock.calls[0];
-    expect(url).toBe(
-      'https://apitravelhub.site/api/v1/booking/booking_room',
-    );
+    expect(url).toBe(`${API_BASE_URL}/api/v1/booking/booking_room`);
     expect(options.method).toBe('POST');
     expect(options.headers.Authorization).toBe('Bearer tok_abc');
     expect(options.headers['Content-Type']).toBe('application/json');
   });
 
-  it('sends habitacionId, checkin, checkout and numHuespedes in body', async () => {
+  it('sends habitacionId, dates, guests, subtotal, impuestos, total and moneda', async () => {
     (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
       makeResponse({id: 'b-1'}),
     );
@@ -51,9 +54,62 @@ describe('bookingApi.bookRoom', () => {
       checkin: '2099-05-19',
       checkout: '2099-05-23',
       numHuespedes: 2,
+      subtotal: 300,
+      impuestos: 57,
+      total: 357,
+      moneda: 'EUR',
     });
     // Token nunca se manda en el body
     expect(body.token).toBeUndefined();
+  });
+
+  it('uppercases the moneda code before sending', async () => {
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      makeResponse({id: 'b-1'}),
+    );
+    await bookRoom({...validParams, moneda: 'usd'});
+    const body = JSON.parse(
+      (globalThis.fetch as jest.Mock).mock.calls[0][1].body,
+    );
+    expect(body.moneda).toBe('USD');
+  });
+
+  it('rounds subtotal/impuestos/total to integer when moneda is COP', async () => {
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      makeResponse({id: 'b-1'}),
+    );
+    await bookRoom({
+      ...validParams,
+      subtotal: 400000.6,
+      impuestos: 76000.4,
+      total: 476001,
+      moneda: 'COP',
+    });
+    const body = JSON.parse(
+      (globalThis.fetch as jest.Mock).mock.calls[0][1].body,
+    );
+    expect(body.subtotal).toBe(400001);
+    expect(body.impuestos).toBe(76000);
+    expect(body.total).toBe(476001);
+  });
+
+  it('keeps two decimals for total/impuestos when moneda is EUR/USD', async () => {
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      makeResponse({id: 'b-1'}),
+    );
+    await bookRoom({
+      ...validParams,
+      subtotal: 300.156,
+      impuestos: 57.041,
+      total: 357.197,
+      moneda: 'EUR',
+    });
+    const body = JSON.parse(
+      (globalThis.fetch as jest.Mock).mock.calls[0][1].body,
+    );
+    expect(body.subtotal).toBe(300.16);
+    expect(body.impuestos).toBe(57.04);
+    expect(body.total).toBe(357.2);
   });
 
   it('returns a Booking with id from API response', async () => {
@@ -155,9 +211,7 @@ describe('bookingApi.getBookings', () => {
     );
     await getBookings('tok_123');
     const [url, options] = (globalThis.fetch as jest.Mock).mock.calls[0];
-    expect(url).toBe(
-      'https://apitravelhub.site/api/v1/booking/get_bookings',
-    );
+    expect(url).toBe(`${API_BASE_URL}/api/v1/booking/get_bookings`);
     expect(options.method).toBe('GET');
     expect(options.headers.Authorization).toBe('Bearer tok_123');
   });
@@ -170,7 +224,7 @@ describe('bookingApi.getBookings', () => {
     expect(list).toEqual([]);
   });
 
-  it('normalizes a booking item with all fields and converts total to COP', async () => {
+  it('normalizes a booking item preserving total and moneda as-is', async () => {
     (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
       makeResponse([
         {
@@ -196,6 +250,7 @@ describe('bookingApi.getBookings', () => {
           subtotal: 360.0,
           impuestos: 72.0,
           total: 432.0,
+          moneda: 'EUR',
         },
       ]),
     );
@@ -221,18 +276,55 @@ describe('bookingApi.getBookings', () => {
         tipoHabitacion: 'deluxe',
         tipoCama: ['king'],
         tamanoHabitacion: '35m2',
-        // 432 EUR * 4200 = 1814400 COP
-        total: 1814400,
+        // El total se preserva en la moneda original (sin conversión a COP).
+        total: 432.0,
+        moneda: 'EUR',
       }),
     );
   });
 
-  it('preserves total without conversion when item explicitly says COP', async () => {
+  it('keeps total and moneda untouched when item says COP', async () => {
     (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
       makeResponse([{id: 'b-2', total: 500000, moneda: 'COP'}]),
     );
     const list = await getBookings('tok_123');
     expect(list[0].total).toBe(500000);
+    expect(list[0].moneda).toBe('COP');
+  });
+
+  it('uppercases the moneda code defensively', async () => {
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      makeResponse([{id: 'b-3', total: 100, moneda: 'eur'}]),
+    );
+    const list = await getBookings('tok_123');
+    expect(list[0].moneda).toBe('EUR');
+  });
+
+  it('infers EUR for small totals when moneda is missing (heuristic)', async () => {
+    // Un total de 100 nunca puede ser COP (sería 100 pesos, irreal para un
+    // hospedaje); asumimos EUR como fallback.
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      makeResponse([{id: 'b-4', total: 100}]),
+    );
+    const list = await getBookings('tok_123');
+    expect(list[0].moneda).toBe('EUR');
+    expect(list[0].total).toBe(100);
+  });
+
+  it('defaults moneda to COP for large totals when missing', async () => {
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      makeResponse([{id: 'b-5', total: 500000}]),
+    );
+    const list = await getBookings('tok_123');
+    expect(list[0].moneda).toBe('COP');
+  });
+
+  it('reads moneda from alternative fields (currency)', async () => {
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      makeResponse([{id: 'b-6', total: 100, currency: 'usd'}]),
+    );
+    const list = await getBookings('tok_123');
+    expect(list[0].moneda).toBe('USD');
   });
 
   it('throws when token is missing', async () => {
@@ -287,6 +379,7 @@ describe('bookingApi.getBookings', () => {
         estado: 'PENDIENTE',
         numHuespedes: 1,
         total: 0,
+        moneda: 'COP',
         imagenes: [],
         amenidades: [],
         tipoCama: [],

@@ -1,6 +1,7 @@
 import React from 'react';
 import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
 import {Colors} from '../theme/colors';
+import {useDates} from '../i18n/useT';
 
 interface CalendarProps {
   year: number;
@@ -12,23 +13,6 @@ interface CalendarProps {
   onNextMonth: () => void;
 }
 
-const MONTH_NAMES = [
-  'Enero',
-  'Febrero',
-  'Marzo',
-  'Abril',
-  'Mayo',
-  'Junio',
-  'Julio',
-  'Agosto',
-  'Septiembre',
-  'Octubre',
-  'Noviembre',
-  'Diciembre',
-];
-
-const DAY_NAMES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-
 export const Calendar: React.FC<CalendarProps> = ({
   year,
   month,
@@ -38,6 +22,8 @@ export const Calendar: React.FC<CalendarProps> = ({
   onPrevMonth,
   onNextMonth,
 }) => {
+  const {monthCapitalized, dayShortNames} = useDates();
+  const DAY_NAMES = dayShortNames();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDayOfWeek = new Date(year, month, 1).getDay();
 
@@ -143,7 +129,7 @@ export const Calendar: React.FC<CalendarProps> = ({
           </Text>
         </TouchableOpacity>
         <Text style={styles.monthTitle}>
-          {MONTH_NAMES[month]} {year}
+          {monthCapitalized(month)} {year}
         </Text>
         <TouchableOpacity onPress={onNextMonth} style={styles.navButton}>
           <Text style={styles.navText}>{'>'}</Text>

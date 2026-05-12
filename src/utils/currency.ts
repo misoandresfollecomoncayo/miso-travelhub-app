@@ -1,28 +1,39 @@
-// TRM (Tasa Representativa del Mercado) asumida para conversión a Pesos
-// colombianos. Centralizada aquí para fácil ajuste en el futuro.
-export const EUR_TO_COP_RATE = 4200;
-export const USD_TO_COP_RATE = 4200;
+export type CurrencyCode = 'COP' | 'EUR' | 'USD';
 
-export const eurToCop = (eurAmount: number): number =>
-  Math.round(eurAmount * EUR_TO_COP_RATE);
+const LOCALE_BY_CURRENCY: Record<CurrencyCode, string> = {
+  COP: 'es-CO',
+  EUR: 'es-ES',
+  USD: 'en-US',
+};
 
 /**
- * Convierte un monto desde una moneda de origen a Pesos colombianos (COP).
- * El backend devuelve los precios mayoritariamente en EUR; la UI los muestra
- * en COP. Si la moneda ya es COP no se aplica conversión.
+ * Formatea un monto que YA está en la moneda destino (sin conversión).
+ *
+ *   formatAmount(600000, 'COP') → "COP $600.000"
+ *   formatAmount(142.86, 'EUR') → "€142,86"
+ *   formatAmount(96, 'USD')     → "$96.00"
+ *
+ * El app ya no convierte monedas internamente: el precio y la moneda se
+ * preservan tal cual los devuelve el backend (en la búsqueda) y los datos
+ * de la reserva (al pagar). Este helper sólo formatea visualmente.
  */
-export const convertToCop = (
+export const formatAmount = (
   amount: number,
-  sourceCurrency: string | null | undefined,
-): number => {
-  const code = (sourceCurrency || 'EUR').toUpperCase();
+  currency: CurrencyCode | string,
+): string => {
+  const code = (currency || 'COP').toUpperCase() as CurrencyCode;
+  const locale = LOCALE_BY_CURRENCY[code] ?? 'es-CO';
+
   if (code === 'COP') {
-    return amount;
+    return `COP $${Math.round(amount).toLocaleString(locale)}`;
   }
-  if (code === 'USD') {
-    return Math.round(amount * USD_TO_COP_RATE);
+
+  const formatted = amount.toLocaleString(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  if (code === 'EUR') {
+    return `€${formatted}`;
   }
-  // Default: tratar cualquier otra moneda (incluyendo 'EUR' explícito o
-  // ausente) como euros y aplicar la TRM EUR→COP.
-  return eurToCop(amount);
+  return `$${formatted}`;
 };

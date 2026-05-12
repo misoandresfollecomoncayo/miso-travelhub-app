@@ -45,6 +45,8 @@ export type SearchStackParamList = {
     nights: number;
     adults: number;
     total: number;
+    /** Moneda con la que se hizo la reserva (mostrada tal cual). */
+    moneda: string;
     confirmationCode: string;
   };
   ReservationPolicies: undefined;

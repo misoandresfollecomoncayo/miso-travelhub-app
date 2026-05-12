@@ -1,7 +1,27 @@
 import React from 'react';
-import {Alert} from 'react-native';
+import {Linking} from 'react-native';
 import {render, fireEvent} from '@testing-library/react-native';
-import {BookingDetailScreen} from '../../src/screens/BookingDetailScreen';
+
+let mockPrefsCurrency: 'COP' | 'EUR' | 'USD' = 'COP';
+let mockPrefsLanguage: 'es' | 'en' = 'es';
+
+jest.mock('../../src/preferences/PreferencesContext', () => ({
+  PreferencesProvider: ({children}: {children: React.ReactNode}) => children,
+  usePreferences: () => ({
+    language: mockPrefsLanguage,
+    currency: mockPrefsCurrency,
+    initializing: false,
+    setLanguage: jest.fn(),
+    setCurrency: jest.fn(),
+  }),
+  SUPPORTED_LANGUAGES: ['es', 'en'],
+  SUPPORTED_CURRENCIES: ['COP', 'EUR', 'USD'],
+}));
+
+import {
+  BookingDetailScreen,
+  buildPaymentUrl,
+} from '../../src/screens/BookingDetailScreen';
 import {BookingListItem} from '../../src/services/bookingApi';
 
 jest.mock('react-native-vector-icons/Ionicons', () => 'Icon');
@@ -29,16 +49,22 @@ const sampleBooking: BookingListItem = {
   distancia: '3 km del centro',
   acceso: 'Metro',
   total: 493824,
+  moneda: 'COP',
 };
+
+let mockRouteBooking: BookingListItem = sampleBooking;
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({goBack: mockGoBack, navigate: mockNavigate}),
-  useRoute: () => ({params: {booking: sampleBooking}}),
+  useRoute: () => ({params: {booking: mockRouteBooking}}),
 }));
 
 describe('BookingDetailScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRouteBooking = sampleBooking;
+    mockPrefsCurrency = 'COP';
+    mockPrefsLanguage = 'es';
   });
 
   it('renders header title "Consultar reserva"', () => {
@@ -125,45 +151,179 @@ describe('BookingDetailScreen', () => {
     );
   });
 
-  it('renders CANCELAR RESERVA button', () => {
+  it('renders the status field with the translated label', () => {
+    mockRouteBooking = {...sampleBooking, estado: 'CONFIRMADA'};
+    const {getByTestId, getByText} = render(<BookingDetailScreen />);
+    expect(getByTestId('booking-detail-status')).toBeTruthy();
+    expect(getByText('Estado:')).toBeTruthy();
+    expect(getByText('Confirmada')).toBeTruthy();
+  });
+
+  it('renders the pending status when estado is PENDIENTE', () => {
+    mockRouteBooking = {...sampleBooking, estado: 'PENDIENTE'};
     const {getByText} = render(<BookingDetailScreen />);
-    expect(getByText('CANCELAR RESERVA')).toBeTruthy();
+    expect(getByText('Pendiente')).toBeTruthy();
   });
 
-  it('shows confirmation Alert when CANCELAR RESERVA is pressed', () => {
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
-    const {getByTestId} = render(<BookingDetailScreen />);
-    fireEvent.press(getByTestId('booking-detail-cancel-button'));
-    expect(alertSpy).toHaveBeenCalledWith(
-      'Cancelar reserva',
-      expect.stringContaining('cancelar'),
-      expect.arrayContaining([
-        expect.objectContaining({text: 'No'}),
-        expect.objectContaining({text: 'Sí, cancelar'}),
-      ]),
-    );
-    alertSpy.mockRestore();
+  it('shows QR when status is CONFIRMADA', () => {
+    mockRouteBooking = {...sampleBooking, estado: 'CONFIRMADA'};
+    const {queryByTestId} = render(<BookingDetailScreen />);
+    expect(queryByTestId('booking-detail-qr')).toBeTruthy();
   });
 
-  it('shows placeholder Alert when confirming cancellation', () => {
-    const alertSpy = jest.spyOn(Alert, 'alert');
-    alertSpy.mockImplementationOnce((_title, _msg, buttons) => {
-      const confirmButton = buttons?.find(b => b.text === 'Sí, cancelar');
-      confirmButton?.onPress?.();
+  it('shows QR when status is COMPLETADA', () => {
+    mockRouteBooking = {...sampleBooking, estado: 'COMPLETADA'};
+    const {queryByTestId} = render(<BookingDetailScreen />);
+    expect(queryByTestId('booking-detail-qr')).toBeTruthy();
+  });
+
+  it('shows QR when status is CANCELADA (still not pending)', () => {
+    mockRouteBooking = {...sampleBooking, estado: 'CANCELADA'};
+    const {queryByTestId} = render(<BookingDetailScreen />);
+    expect(queryByTestId('booking-detail-qr')).toBeTruthy();
+  });
+
+  it('hides QR when status is PENDIENTE', () => {
+    mockRouteBooking = {...sampleBooking, estado: 'PENDIENTE'};
+    const {queryByTestId} = render(<BookingDetailScreen />);
+    expect(queryByTestId('booking-detail-qr')).toBeNull();
+  });
+
+  it('hides QR when status is pendiente in lower-case (case-insensitive)', () => {
+    mockRouteBooking = {...sampleBooking, estado: 'pendiente'};
+    const {queryByTestId} = render(<BookingDetailScreen />);
+    expect(queryByTestId('booking-detail-qr')).toBeNull();
+  });
+
+  describe('Pay button', () => {
+    it('does NOT render when status is PENDIENTE', () => {
+      mockRouteBooking = {...sampleBooking, estado: 'PENDIENTE'};
+      const {queryByTestId} = render(<BookingDetailScreen />);
+      expect(queryByTestId('booking-detail-pay-button')).toBeNull();
     });
-    alertSpy.mockImplementationOnce(() => {});
-    const {getByTestId} = render(<BookingDetailScreen />);
-    fireEvent.press(getByTestId('booking-detail-cancel-button'));
-    expect(alertSpy).toHaveBeenCalledTimes(2);
-    expect(alertSpy.mock.calls[1][0]).toBe('Cancelación pendiente');
-    alertSpy.mockRestore();
+
+    it('does NOT render when status is COMPLETADA', () => {
+      mockRouteBooking = {...sampleBooking, estado: 'COMPLETADA'};
+      const {queryByTestId} = render(<BookingDetailScreen />);
+      expect(queryByTestId('booking-detail-pay-button')).toBeNull();
+    });
+
+    it('does NOT render when status is CANCELADA', () => {
+      mockRouteBooking = {...sampleBooking, estado: 'CANCELADA'};
+      const {queryByTestId} = render(<BookingDetailScreen />);
+      expect(queryByTestId('booking-detail-pay-button')).toBeNull();
+    });
+
+    it('renders when status is CONFIRMADA', () => {
+      mockRouteBooking = {...sampleBooking, estado: 'CONFIRMADA'};
+      const {getByTestId, getByText} = render(<BookingDetailScreen />);
+      expect(getByTestId('booking-detail-pay-button')).toBeTruthy();
+      expect(getByText('PAGAR')).toBeTruthy();
+    });
+
+    it('opens the payment gateway with the booking total + moneda (COP)', () => {
+      mockRouteBooking = {...sampleBooking, estado: 'CONFIRMADA'};
+      // La preferencia del usuario es USD pero la reserva fue en COP — debe
+      // enviarse la moneda y total de la reserva, NO la preferencia.
+      mockPrefsCurrency = 'USD';
+      const openSpy = jest
+        .spyOn(Linking, 'openURL')
+        .mockResolvedValue(undefined as unknown as void);
+      const {getByTestId} = render(<BookingDetailScreen />);
+      fireEvent.press(getByTestId('booking-detail-pay-button'));
+      expect(openSpy).toHaveBeenCalledTimes(1);
+      const calledUrl = openSpy.mock.calls[0][0] as string;
+      expect(calledUrl).toContain(
+        'https://miso-pasarela-pagos-evbwp.ondigitalocean.app/payment',
+      );
+      expect(calledUrl).toContain('invoiceId=BKG-00001');
+      expect(calledUrl).toContain('amount=493824');
+      expect(calledUrl).toContain('currency=COP');
+      expect(calledUrl).toContain('lang=ES');
+      expect(calledUrl).toContain('returnUrl=AppTravelhub');
+      openSpy.mockRestore();
+    });
+
+    it('sends booking moneda=USD with two-decimal amount when booking was in USD', () => {
+      mockRouteBooking = {
+        ...sampleBooking,
+        estado: 'CONFIRMADA',
+        total: 96,
+        moneda: 'USD',
+      };
+      // La preferencia del usuario es COP pero la reserva fue en USD — se
+      // envía USD al gateway.
+      mockPrefsCurrency = 'COP';
+      const openSpy = jest
+        .spyOn(Linking, 'openURL')
+        .mockResolvedValue(undefined as unknown as void);
+      const {getByTestId} = render(<BookingDetailScreen />);
+      fireEvent.press(getByTestId('booking-detail-pay-button'));
+      const calledUrl = openSpy.mock.calls[0][0] as string;
+      expect(calledUrl).toContain('amount=96.00');
+      expect(calledUrl).toContain('currency=USD');
+      openSpy.mockRestore();
+    });
+
+    it('sends booking moneda=EUR with two-decimal amount when booking was in EUR', () => {
+      mockRouteBooking = {
+        ...sampleBooking,
+        estado: 'CONFIRMADA',
+        total: 142.86,
+        moneda: 'EUR',
+      };
+      mockPrefsCurrency = 'COP';
+      const openSpy = jest
+        .spyOn(Linking, 'openURL')
+        .mockResolvedValue(undefined as unknown as void);
+      const {getByTestId} = render(<BookingDetailScreen />);
+      fireEvent.press(getByTestId('booking-detail-pay-button'));
+      const calledUrl = openSpy.mock.calls[0][0] as string;
+      expect(calledUrl).toContain('amount=142.86');
+      expect(calledUrl).toContain('currency=EUR');
+      openSpy.mockRestore();
+    });
   });
 
-  it('shows em-dash when destination has no ciudad/pais', () => {
-    // Use jest.isolateModules to swap mock for one test isn't trivial;
-    // instead we rely on the existing inline param — covered in
-    // unit-test of formatLongDate via integration here.
-    // (Defensive: accepts dash fallback path coverage)
-    expect(true).toBe(true);
+  describe('buildPaymentUrl()', () => {
+    it('builds the URL with all params upper-cased where needed', () => {
+      const url = buildPaymentUrl({
+        invoiceId: 'BKG-1',
+        currency: 'eur',
+        amount: 1234,
+        lang: 'en',
+      });
+      expect(url).toContain('invoiceId=BKG-1');
+      expect(url).toContain('currency=EUR');
+      // No-COP currencies se serializan con 2 decimales.
+      expect(url).toContain('amount=1234.00');
+      expect(url).toContain('lang=EN');
+      expect(url).toContain('returnUrl=AppTravelhub');
+    });
+
+    it('serializes COP amounts as integers (no decimals)', () => {
+      const url = buildPaymentUrl({
+        invoiceId: 'X',
+        currency: 'COP',
+        amount: 493824.6,
+        lang: 'es',
+      });
+      // 493824.6 redondeado → 493825 (entero, sin punto)
+      expect(url).toContain('amount=493825');
+      expect(url).not.toContain('amount=493825.');
+    });
+
+    it('uses the gateway base URL', () => {
+      const url = buildPaymentUrl({
+        invoiceId: 'X',
+        currency: 'COP',
+        amount: 0,
+        lang: 'es',
+      });
+      expect(url.startsWith(
+        'https://miso-pasarela-pagos-evbwp.ondigitalocean.app/payment?',
+      )).toBe(true);
+    });
   });
+
 });

@@ -11,6 +11,7 @@ const mockRouteParams = {
   nights: 4,
   adults: 2,
   total: 476000,
+  moneda: 'COP',
   confirmationCode: 'TH-ABC123-XYZ1',
 };
 
@@ -32,14 +33,16 @@ describe('ReservationSuccessScreen', () => {
     expect(getByTestId('success-icon')).toBeTruthy();
   });
 
-  it('renders title "¡Reserva confirmada!"', () => {
+  it('renders title "Reserva enviada"', () => {
     const {getByText} = render(<ReservationSuccessScreen />);
-    expect(getByText('¡Reserva confirmada!')).toBeTruthy();
+    expect(getByText('Reserva enviada')).toBeTruthy();
   });
 
   it('renders subtitle', () => {
     const {getByText} = render(<ReservationSuccessScreen />);
-    expect(getByText('Tu reserva ha sido registrada con éxito.')).toBeTruthy();
+    expect(
+      getByText('Tu reserva espera confirmación por parte del hotel.'),
+    ).toBeTruthy();
   });
 
   it('renders confirmation code', () => {

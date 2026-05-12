@@ -19,7 +19,9 @@ import {Colors} from '../theme/colors';
 import {SearchStackParamList} from '../navigation/SearchStackNavigator';
 import {Calendar} from '../components/Calendar';
 import {CounterInput} from '../components/CounterInput';
-import {formatPrice, generateConfirmationCode} from '../utils/format';
+import {generateConfirmationCode} from '../utils/format';
+import {formatAmount} from '../utils/currency';
+import {useT, useDates} from '../i18n/useT';
 import {resolveImage} from '../utils/images';
 import {useAuth} from '../auth/AuthContext';
 import {bookRoom} from '../services/bookingApi';
@@ -31,24 +33,6 @@ type ReservationNavigationProp = NativeStackNavigationProp<
 >;
 
 const TAX_RATE = 0.19;
-const CANCELLATION_POLICY =
-  'Cancelación gratuita hasta 48 horas antes del check-in.';
-const TAX_POLICY = 'Los precios incluyen IVA.';
-
-const MONTH_NAMES_LOWER = [
-  'enero',
-  'febrero',
-  'marzo',
-  'abril',
-  'mayo',
-  'junio',
-  'julio',
-  'agosto',
-  'septiembre',
-  'octubre',
-  'noviembre',
-  'diciembre',
-];
 
 interface ParsedIso {
   year: number;
@@ -77,18 +61,23 @@ const computeNights = (checkin: string, checkout: string): number => {
   return diff > 0 ? diff : 1;
 };
 
-const formatDateRange = (checkin: string, checkout: string): string => {
-  const s = parseIsoDate(checkin);
-  const e = parseIsoDate(checkout);
-  return `${s.day} ${MONTH_NAMES_LOWER[s.month]} ${s.year} - ${e.day} ${
-    MONTH_NAMES_LOWER[e.month]
-  } ${e.year}`;
-};
+const buildFormatDateRange =
+  (monthFull: (m: number) => string) =>
+  (checkin: string, checkout: string): string => {
+    const s = parseIsoDate(checkin);
+    const e = parseIsoDate(checkout);
+    return `${s.day} ${monthFull(s.month)} ${s.year} - ${e.day} ${monthFull(
+      e.month,
+    )} ${e.year}`;
+  };
 
 export const ReservationScreen: React.FC = () => {
   const route = useRoute<ReservationRouteProp>();
   const navigation = useNavigation<ReservationNavigationProp>();
   const {user} = useAuth();
+  const t = useT();
+  const {monthFull} = useDates();
+  const formatDateRange = buildFormatDateRange(monthFull);
   const {room, destination, checkin: initialCheckin, checkout: initialCheckout} =
     route.params;
 
@@ -119,9 +108,16 @@ export const ReservationScreen: React.FC = () => {
   const nights = computeNights(checkinIso, checkoutIso);
   const dateRange = formatDateRange(checkinIso, checkoutIso);
   const subtotal = room.precio * nights;
-  const taxes = Math.round(subtotal * TAX_RATE);
-  const total = subtotal + taxes;
-  const nightsLabel = nights === 1 ? 'noche' : 'noches';
+  // Si el backend devolvió un precio CON impuestos (campo `total` del search
+  // response), lo usamos como fuente de verdad — la tasa real puede no ser
+  // 19% IVA Colombia. Sólo si no viene ese dato caemos al fallback local.
+  const totalFromBackend =
+    room.precioConImpuestos > 0 ? room.precioConImpuestos * nights : 0;
+  const total =
+    totalFromBackend > 0
+      ? totalFromBackend
+      : subtotal + Math.round(subtotal * TAX_RATE);
+  const taxes = Math.max(0, total - subtotal);
   const heroImage = resolveImage(room.imagenes);
 
   const openDateModal = () => {
@@ -197,8 +193,8 @@ export const ReservationScreen: React.FC = () => {
   const submitBooking = async () => {
     if (!user || !user.token) {
       Alert.alert(
-        'Inicia sesión',
-        'Debes iniciar sesión para crear una reserva.',
+        t('reservation.notLoggedInTitle'),
+        t('reservation.notLoggedInMessage'),
       );
       return;
     }
@@ -209,6 +205,14 @@ export const ReservationScreen: React.FC = () => {
         checkin: checkinIso,
         checkout: checkoutIso,
         numHuespedes: adultsCount,
+        // Subtotal/impuestos/total en la moneda del room — el backend los
+        // persiste para que la reserva siempre se muestre tal cual la compró
+        // el usuario. Los impuestos vienen del propio backend a través del
+        // campo `total` del search response, no se calculan con tasa fija.
+        subtotal,
+        impuestos: taxes,
+        total,
+        moneda: room.moneda,
         token: user.token,
       });
       navigation.navigate('ReservationSuccess', {
@@ -218,12 +222,13 @@ export const ReservationScreen: React.FC = () => {
         nights,
         adults: adultsCount,
         total,
+        moneda: room.moneda,
         confirmationCode: booking.id || generateConfirmationCode(),
       });
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : 'No se pudo crear la reserva';
-      Alert.alert('Error', message);
+        err instanceof Error ? err.message : t('reservation.errorFallback');
+      Alert.alert(t('common.error'), message);
     } finally {
       setSubmitting(false);
     }
@@ -234,12 +239,12 @@ export const ReservationScreen: React.FC = () => {
       return;
     }
     Alert.alert(
-      'Confirmar reserva',
-      `¿Deseas confirmar la reserva?`,
+      t('reservation.confirmTitle'),
+      t('reservation.confirmMessage'),
       [
-        {text: 'Cancelar', style: 'cancel'},
+        {text: t('common.cancel'), style: 'cancel'},
         {
-          text: 'Confirmar',
+          text: t('common.confirm'),
           onPress: () => {
             submitBooking();
           },
@@ -257,11 +262,11 @@ export const ReservationScreen: React.FC = () => {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
             accessibilityRole="button"
-            accessibilityLabel="Volver"
+            accessibilityLabel={t('common.back')}
             hitSlop={{top: 12, bottom: 12, left: 12, right: 12}}>
             <Icon name="arrow-back" size={24} color={Colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Reservar</Text>
+          <Text style={styles.headerTitle}>{t('reservation.title')}</Text>
           <View style={styles.headerSpacer} />
         </View>
       </SafeAreaView>
@@ -273,12 +278,12 @@ export const ReservationScreen: React.FC = () => {
         <Image source={{uri: heroImage}} style={styles.heroImage} />
 
         <View style={styles.summaryField}>
-          <Text style={styles.fieldLabel}>Destino:</Text>
+          <Text style={styles.fieldLabel}>{t('reservation.destination')}</Text>
           <Text style={styles.fieldValue}>{destination}</Text>
         </View>
 
         <View style={styles.summaryField}>
-          <Text style={styles.fieldLabel}>Hospedaje:</Text>
+          <Text style={styles.fieldLabel}>{t('reservation.lodging')}</Text>
           <Text style={styles.fieldValue}>{room.nombreHotel}</Text>
         </View>
 
@@ -287,9 +292,9 @@ export const ReservationScreen: React.FC = () => {
           style={styles.summaryField}
           onPress={openDateModal}
           accessibilityRole="button"
-          accessibilityLabel="Editar fechas de la reserva"
+          accessibilityLabel={t('reservation.editDatesAccessibility')}
           activeOpacity={0.7}>
-          <Text style={styles.fieldLabel}>Fecha:</Text>
+          <Text style={styles.fieldLabel}>{t('reservation.date')}</Text>
           <View style={styles.fieldValueRow}>
             <Text style={styles.fieldValue}>{dateRange}</Text>
             <Icon
@@ -302,7 +307,7 @@ export const ReservationScreen: React.FC = () => {
 
         <View style={styles.summaryField}>
           <CounterInput
-            label="Número de adultos"
+            label={t('reservation.adults')}
             value={adultsCount}
             min={1}
             max={maxCapacity}
@@ -310,29 +315,30 @@ export const ReservationScreen: React.FC = () => {
             onDecrement={decrementAdults}
           />
           <Text style={styles.capacityHint}>
-            Capacidad máxima: {maxCapacity}{' '}
-            {maxCapacity === 1 ? 'persona' : 'personas'}
+            {maxCapacity === 1
+              ? t('reservation.maxCapacitySingular', {n: maxCapacity})
+              : t('reservation.maxCapacityPlural', {n: maxCapacity})}
           </Text>
         </View>
 
         <View style={styles.breakdownCard} testID="reservation-breakdown">
           <View style={styles.breakdownRow}>
-            <Text style={styles.breakdownLabel}>Subtotal</Text>
+            <Text style={styles.breakdownLabel}>{t('reservation.subtotal')}</Text>
             <Text style={styles.breakdownValue}>
-              COP ${formatPrice(subtotal)}
+              {formatAmount(subtotal, room.moneda)}
             </Text>
           </View>
           <View style={styles.breakdownRow}>
-            <Text style={styles.breakdownLabel}>IVA (19%)</Text>
+            <Text style={styles.breakdownLabel}>{t('reservation.taxes')}</Text>
             <Text style={styles.breakdownValue}>
-              COP ${formatPrice(taxes)}
+              {formatAmount(taxes, room.moneda)}
             </Text>
           </View>
           <View style={styles.breakdownDivider} />
           <View style={styles.breakdownRow}>
-            <Text style={styles.breakdownTotalLabel}>Total</Text>
+            <Text style={styles.breakdownTotalLabel}>{t('reservation.total')}</Text>
             <Text style={styles.breakdownTotalValue}>
-              COP ${formatPrice(total)}
+              {formatAmount(total, room.moneda)}
             </Text>
           </View>
         </View>
@@ -344,7 +350,7 @@ export const ReservationScreen: React.FC = () => {
               size={20}
               color={Colors.textSecondary}
             />
-            <Text style={styles.policyText}>{CANCELLATION_POLICY}</Text>
+            <Text style={styles.policyText}>{t('reservation.cancellationPolicy')}</Text>
           </View>
           <View style={styles.policyRow}>
             <Icon
@@ -352,7 +358,7 @@ export const ReservationScreen: React.FC = () => {
               size={20}
               color={Colors.textSecondary}
             />
-            <Text style={styles.policyText}>{TAX_POLICY}</Text>
+            <Text style={styles.policyText}>{t('reservation.taxPolicy')}</Text>
           </View>
         </View>
 
@@ -363,7 +369,7 @@ export const ReservationScreen: React.FC = () => {
             onPress={() => setPoliciesAccepted(prev => !prev)}
             accessibilityRole="checkbox"
             accessibilityState={{checked: policiesAccepted}}
-            accessibilityLabel="Al continuar, aceptas nuestras políticas de reservación"
+            accessibilityLabel={t('reservation.acceptPoliciesAccessibility')}
             hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
             <View
               style={[
@@ -376,13 +382,13 @@ export const ReservationScreen: React.FC = () => {
             </View>
           </TouchableOpacity>
           <Text style={styles.consentText}>
-            Al continuar, aceptas nuestras{' '}
+            {t('reservation.acceptPoliciesPrefix')}
             <Text
               testID="reservation-policies-link"
               style={styles.consentLink}
               onPress={() => navigation.navigate('ReservationPolicies')}
               accessibilityRole="link">
-              políticas de reservación
+              {t('reservation.acceptPoliciesLink')}
             </Text>
           </Text>
         </View>
@@ -390,11 +396,12 @@ export const ReservationScreen: React.FC = () => {
 
       <View style={styles.footer}>
         <View style={styles.priceContainer}>
-          <Text style={styles.totalPrice}>COP ${formatPrice(total)}</Text>
+          <Text style={styles.totalPrice}>{formatAmount(total, room.moneda)}</Text>
           <Text style={styles.nightsLabel}>
-            Por{' '}
             <Text style={styles.nightsLink}>
-              {nights} {nightsLabel}
+              {nights === 1
+                ? t('detail.forNightsSingular', {n: nights})
+                : t('detail.forNightsPlural', {n: nights})}
             </Text>
           </Text>
         </View>
@@ -407,7 +414,7 @@ export const ReservationScreen: React.FC = () => {
           onPress={handlePagar}
           disabled={!policiesAccepted || submitting}
           accessibilityRole="button"
-          accessibilityLabel="Pagar reserva"
+          accessibilityLabel={t('reservation.payButtonAccessibility')}
           accessibilityState={{disabled: !policiesAccepted || submitting}}
           activeOpacity={0.85}>
           {submitting ? (
@@ -416,7 +423,7 @@ export const ReservationScreen: React.FC = () => {
               testID="reservation-loading"
             />
           ) : (
-            <Text style={styles.payButtonText}>RESERVAR</Text>
+            <Text style={styles.payButtonText}>{t('reservation.payButton')}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -429,13 +436,13 @@ export const ReservationScreen: React.FC = () => {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalContent} testID="reservation-date-modal">
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Editar fechas</Text>
+              <Text style={styles.modalTitle}>{t('reservation.editDatesTitle')}</Text>
               <TouchableOpacity
                 testID="reservation-date-modal-close"
                 onPress={cancelDates}
                 hitSlop={{top: 12, bottom: 12, left: 12, right: 12}}
                 accessibilityRole="button"
-                accessibilityLabel="Cerrar">
+                accessibilityLabel={t('common.close')}>
                 <Icon name="close" size={24} color={Colors.textPrimary} />
               </TouchableOpacity>
             </View>
@@ -454,8 +461,8 @@ export const ReservationScreen: React.FC = () => {
                 style={styles.modalSecondaryButton}
                 onPress={cancelDates}
                 accessibilityRole="button"
-                accessibilityLabel="Cancelar">
-                <Text style={styles.modalSecondaryText}>Cancelar</Text>
+                accessibilityLabel={t('common.cancel')}>
+                <Text style={styles.modalSecondaryText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 testID="reservation-date-confirm"
@@ -466,8 +473,8 @@ export const ReservationScreen: React.FC = () => {
                 onPress={confirmDates}
                 disabled={!canConfirmDates}
                 accessibilityRole="button"
-                accessibilityLabel="Confirmar fechas">
-                <Text style={styles.modalPrimaryText}>Confirmar</Text>
+                accessibilityLabel={t('common.confirm')}>
+                <Text style={styles.modalPrimaryText}>{t('common.confirm')}</Text>
               </TouchableOpacity>
             </View>
           </View>

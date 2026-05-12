@@ -11,6 +11,8 @@ const mockRoom: Room = {
   id: 'room-1',
   nombreHotel: 'Hotel Casa del Coliseo',
   precio: 150000,
+  precioConImpuestos: 180000,
+  moneda: 'COP',
   direccion: 'Calle 10',
   capacidadMaxima: 2,
   distancia: '3 km',
@@ -37,6 +39,7 @@ let mockRouteParams: {
   adults: number;
   checkin: string;
   checkout: string;
+  viewOnly?: boolean;
 } = {
   room: mockRoom,
   nights: 4,
@@ -198,5 +201,50 @@ describe('DetailScreen', () => {
       },
     });
     expect(getByText('2/3')).toBeTruthy();
+  });
+
+  describe('discount display', () => {
+    it('does NOT render the original price when there is no discount', () => {
+      const {queryByTestId} = render(<DetailScreen />);
+      expect(queryByTestId('detail-original-price')).toBeNull();
+    });
+
+    it('renders both original (struck-through) and discounted total prices', () => {
+      // precio 150.000/noche con descuento, original 200.000/noche, 4 noches:
+      //   total con descuento = 600.000
+      //   total sin descuento = 800.000
+      mockRouteParams = {
+        room: {...mockRoom, precio: 150000, precioOriginal: 200000},
+        nights: 4,
+        destination: 'Cartagena, Colombia',
+        dateRange: '19 enero 2026 - 23 enero 2026',
+        adults: 2,
+        checkin: '2026-01-19',
+        checkout: '2026-01-23',
+      };
+      const {getByTestId, getByText} = render(<DetailScreen />);
+      const originalNode = getByTestId('detail-original-price');
+      expect(originalNode).toBeTruthy();
+      const flatStyle = Array.isArray(originalNode.props.style)
+        ? Object.assign({}, ...originalNode.props.style)
+        : originalNode.props.style;
+      expect(flatStyle.textDecorationLine).toBe('line-through');
+      expect(getByText(/COP \$800\.000/)).toBeTruthy(); // original total
+      expect(getByText(/COP \$600\.000/)).toBeTruthy(); // discounted total
+    });
+
+    it('does NOT render the original price when precioOriginal <= precio', () => {
+      mockRouteParams = {
+        room: {...mockRoom, precio: 150000, precioOriginal: 150000},
+        nights: 4,
+        destination: 'Cartagena, Colombia',
+        dateRange: '19 enero 2026 - 23 enero 2026',
+        adults: 2,
+        checkin: '2026-01-19',
+        checkout: '2026-01-23',
+      };
+      const {queryByTestId} = render(<DetailScreen />);
+      expect(queryByTestId('detail-original-price')).toBeNull();
+    });
   });
 });
