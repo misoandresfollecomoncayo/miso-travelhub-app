@@ -254,31 +254,10 @@ jobs:
           force-avd-creation: false
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: |
-            # El runner de android-emulator-runner ejecuta este script con
-            # /usr/bin/sh (dash), no bash — usamos sintaxis POSIX (sin
-            # brace expansion `{1..30}` ni operadores bashistas).
-            set -e
-
-            # Metro en background
-            npm start > metro.log 2>&1 &
-            METRO_PID=$!
-
-            # Espera a que Metro responda (POSIX, hasta 60 s).
-            i=0
-            while [ "$i" -lt 30 ]; do
-              if curl -sf http://localhost:8081/status > /dev/null; then
-                echo "Metro is up"
-                break
-              fi
-              i=$((i + 1))
-              sleep 2
-            done
-
-            # Detox abre la app, reverse-tunnels el puerto y corre los tests
-            npm run e2e:test:android -- --headless --record-logs all
-
-            kill $METRO_PID || true
+          # android-emulator-runner@v2 ejecuta cada línea del bloque YAML
+          # como un `sh -c` independiente, lo que rompe loops y variables.
+          # Delegamos a un script bash propio para tener una sola invocación.
+          script: bash scripts/e2e-android-ci.sh
 
       - name: Upload Detox artifacts on failure
         if: failure()
