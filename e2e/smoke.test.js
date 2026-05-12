@@ -31,12 +31,12 @@ describe('Smoke', () => {
   });
 
   it('renders the three bottom tabs', async () => {
-    // toExist() en vez de toBeVisible() — Fabric reporta visibility < 100%
-    // para hijos del BottomTabBar (ver nota arriba), pero toExist verifica
-    // presencia en la jerarquía nativa, suficiente para smoke.
-    await expect(element(by.label('Buscar, tab, 1 of 3'))).toExist();
-    await expect(element(by.label('Reservas, tab, 2 of 3'))).toExist();
-    await expect(element(by.label('Usuario, tab, 3 of 3'))).toExist();
+    // Usamos testIDs (cross-platform) en vez de accessibilityLabel —
+    // `accessibilityLabel="X, tab, Y of N"` es un formato de iOS que
+    // React Navigation no replica idénticamente en Android.
+    await expect(element(by.id('tab-search'))).toExist();
+    await expect(element(by.id('tab-reservations'))).toExist();
+    await expect(element(by.id('tab-user'))).toExist();
   });
 
   it('renders the three counters (adults, children, rooms)', async () => {

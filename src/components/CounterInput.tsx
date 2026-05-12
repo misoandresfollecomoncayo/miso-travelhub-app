@@ -35,7 +35,10 @@ export const CounterInput: React.FC<CounterInputProps> = ({
           testID={testID ? `counter-${testID}-dec` : undefined}
           style={[styles.button, value <= min && styles.buttonDisabled]}
           onPress={onDecrement}
-          disabled={value <= min}>
+          disabled={value <= min}
+          accessibilityRole="button"
+          accessibilityLabel={`Disminuir ${label}`}
+          accessibilityState={{disabled: value <= min}}>
           <Text
             style={[
               styles.buttonText,
@@ -46,14 +49,18 @@ export const CounterInput: React.FC<CounterInputProps> = ({
         </TouchableOpacity>
         <Text
           testID={testID ? `counter-${testID}-value` : undefined}
-          style={styles.value}>
+          style={styles.value}
+          accessibilityLabel={`${label}: ${value}`}>
           {value}
         </Text>
         <TouchableOpacity
           testID={testID ? `counter-${testID}-inc` : undefined}
           style={[styles.button, atMax && styles.buttonDisabled]}
           onPress={onIncrement}
-          disabled={atMax}>
+          disabled={atMax}
+          accessibilityRole="button"
+          accessibilityLabel={`Aumentar ${label}`}
+          accessibilityState={{disabled: atMax}}>
           <Text
             style={[styles.buttonText, atMax && styles.buttonTextDisabled]}>
             +

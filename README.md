@@ -265,12 +265,14 @@ reales del usuario (taps, escritura, navegación).
 
 | Archivo | Pruebas | Cubre |
 |---|---|---|
-| `e2e/smoke.test.js` | 7 | Arranque de la aplicación, render de la pantalla de búsqueda, presencia de los tres *tabs*, presencia de los tres contadores, *chevrons* y cabeceras del calendario, ingreso de destino |
-| `e2e/search.test.js` | 13 (1 *skip*) | Inputs del destino (typing, clearText), contadores de adultos / niños / habitaciones (incremento, decremento, mínimos), navegación de meses del calendario, selección de fechas de entrada y salida |
+| `e2e/smoke.test.js` | 7 | Arranque, render de la pantalla de búsqueda, presencia de los tres *tabs*, contadores, *chevrons* del calendario, ingreso de destino |
+| `e2e/search.test.js` | 13 (1 *skip*) | Inputs del destino (typing, clearText), contadores (incremento/decremento/mínimo), navegación de meses, selección de fechas |
+| `e2e/accessibility.test.js` | 6 | Labels de accesibilidad sobre destino, botón Buscar, contadores y tabs; interacción del contador a través del `accessibilityLabel` |
+| `e2e/i18n.test.js` | 8 (1 *skip*) | Renderizado de strings en español, etiquetas de los contadores localizadas, días de la semana abreviados en español en el calendario |
 | `e2e/login.test.js` | 3 (todas *skipped*) | Validación de correo, inicio de sesión, navegación a Register — bloqueadas por el bug de Detox + Fabric (la navegación al tab "Usuario" no es confiable) |
 
-**Total: 23 pruebas activas + 4 documentadas como `skip`.** La suite completa
-se ejecuta en aproximadamente 1 minuto 40 segundos sobre un simulador iOS.
+**Total: 34 pruebas activas + 5 documentadas como `skip`.** La suite completa
+se ejecuta en aproximadamente 2 minutos 30 segundos sobre un simulador iOS.
 
 ### Limitación conocida — Detox 20 con arquitectura nueva de React Native
 

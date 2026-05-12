@@ -114,6 +114,7 @@ export const SearchScreen: React.FC = () => {
             value={destination}
             onChangeText={setDestination}
             placeholder={t('search.destinationPlaceholder')}
+            accessibilityLabel={t('search.destination')}
           />
         </View>
 
@@ -158,7 +159,10 @@ export const SearchScreen: React.FC = () => {
           testID="search-button"
           style={[styles.searchButton, !isFormValid && styles.searchButtonDisabled]}
           onPress={handleSearch}
-          disabled={!isFormValid}>
+          disabled={!isFormValid}
+          accessibilityRole="button"
+          accessibilityLabel={t('search.searchButton')}
+          accessibilityState={{disabled: !isFormValid}}>
           <Text style={styles.searchButtonText}>{t('search.searchButton')}</Text>
         </TouchableOpacity>
       </ScrollView>

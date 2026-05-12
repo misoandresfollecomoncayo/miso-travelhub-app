@@ -13,9 +13,11 @@ describe('Search screen — destination', () => {
     await device.reloadReactNative();
   });
 
-  it('renders the destination input with placeholder text', async () => {
+  it('renders the destination input', async () => {
+    // Sólo verificamos el TextInput. Los placeholders se exponen
+    // diferente entre iOS y Android (Android no los pone en el árbol
+    // de texto), así que matchear por placeholder no es portable.
     await expect(element(by.id('search-destination'))).toBeVisible();
-    await expect(element(by.text('Ciudad, país'))).toBeVisible();
   });
 
   it('lets the user type a destination', async () => {
