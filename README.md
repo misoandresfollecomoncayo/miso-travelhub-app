@@ -308,18 +308,29 @@ El *workflow* `.github/workflows/ci.yml` ejecuta cuatro *jobs* en cada
             push / pull_request
                     │
                   ┌─┴─┐
-                  │lint│
+                  │lint│   (gate barato — análisis estático)
                   └─┬─┘
                     │
-       ┌────────────┼────────────┐
-       ▼            ▼            ▼
-     test       e2e-ios     e2e-android
+                  ┌─┴─┐
+                  │test│   (gate intermedio — pruebas unitarias)
+                  └─┬─┘
+                    │
+            ┌───────┴───────┐
+            ▼               ▼
+        e2e-ios       e2e-android
+        (macOS)         (ubuntu)
 ```
 
-Los *jobs* de E2E corren en paralelo con `test` tras la finalización de
-`lint`. Cargan artefactos (capturas, video y logs) **solo cuando fallan**,
-con retención de 7 días bajo los nombres `detox-artifacts-ios` y
-`detox-artifacts-android`.
+El *pipeline* ejecuta las etapas en orden creciente de costo computacional.
+`lint` (~2 min) y `test` (~3 min) actúan como compuertas previas: si
+fallan, los *jobs* de E2E ni se inician. Esto evita consumir los ~45 min
+combinados de los *runners* macOS y Android cuando una regresión hubiera
+podido detectarse con análisis estático o pruebas unitarias.
+
+Los *jobs* `e2e-ios` y `e2e-android` se ejecutan en paralelo entre sí una
+vez superados `lint` y `test`. Cargan artefactos (capturas, video y logs)
+**sólo cuando fallan**, con retención de 7 días bajo los nombres
+`detox-artifacts-ios` y `detox-artifacts-android`.
 
 ## 7.1 Optimizaciones de caché
 

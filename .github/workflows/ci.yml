@@ -26,7 +26,7 @@ jobs:
         run: npm run lint
 
   test:
-    name: Tests
+    name: Unitarias (Jest)
     runs-on: ubuntu-latest
     needs: lint
     steps:
@@ -58,7 +58,10 @@ jobs:
     # (Apple Silicon, runners más rápidos) en vez de macos-latest para
     # fijar la versión y evitar sorpresas al actualizar GitHub.
     runs-on: macos-14
-    needs: lint
+    # Las pruebas unitarias son baratas (~3 min en ubuntu) frente al E2E
+    # (~20-25 min en macOS). Si fallan no tiene sentido gastar minutos de
+    # macOS en correr Detox, así que dependemos también de `test`.
+    needs: [lint, test]
     timeout-minutes: 60
     env:
       # Detox requiere que el Simulator esté booted antes de los tests.
@@ -155,7 +158,10 @@ jobs:
     # ubuntu-latest porque GitHub-hosted ya expone KVM (/dev/kvm) y tiene
     # Android SDK preinstalado.
     runs-on: ubuntu-latest
-    needs: lint
+    # Idem que e2e-ios: las pruebas unitarias son baratas (~3 min) y
+    # detectan la mayoría de regresiones; sólo gastamos los ~25 min del
+    # job Android si pasan.
+    needs: [lint, test]
     timeout-minutes: 60
     env:
       # AVD que la job crea con android-emulator-runner. Debe coincidir con
