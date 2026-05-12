@@ -82,6 +82,18 @@ jobs:
           ruby-version: '3.3'
           bundler-cache: false
 
+      - name: Select Xcode 16.1+
+        # macos-14 trae Xcode 15.4 como default, pero React Native 0.84
+        # requiere >= 16.1 (lo verifica `react_native_pods.rb` al instalar
+        # los pods). Forzamos una versión moderna del Xcode preinstalado en
+        # el runner; "latest-stable" usa la mayor disponible compatible.
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Print Xcode version (sanity check)
+        run: xcodebuild -version
+
       - name: Install npm dependencies
         run: npm ci
 
@@ -243,11 +255,24 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: |
+            # El runner de android-emulator-runner ejecuta este script con
+            # /usr/bin/sh (dash), no bash — usamos sintaxis POSIX (sin
+            # brace expansion `{1..30}` ni operadores bashistas).
+            set -e
+
             # Metro en background
             npm start > metro.log 2>&1 &
             METRO_PID=$!
-            for i in {1..30}; do
-              curl -sf http://localhost:8081/status > /dev/null && break || sleep 2
+
+            # Espera a que Metro responda (POSIX, hasta 60 s).
+            i=0
+            while [ "$i" -lt 30 ]; do
+              if curl -sf http://localhost:8081/status > /dev/null; then
+                echo "Metro is up"
+                break
+              fi
+              i=$((i + 1))
+              sleep 2
             done
 
             # Detox abre la app, reverse-tunnels el puerto y corre los tests
