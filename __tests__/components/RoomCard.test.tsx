@@ -7,6 +7,8 @@ const mockRoom: Room = {
   id: '22222222-2222-2222-2222-000000000001',
   nombreHotel: 'Hotel Test',
   precio: 360,
+  precioConImpuestos: 432,
+  moneda: 'COP',
   direccion: 'Calle 123',
   capacidadMaxima: 2,
   distancia: '3 km del centro',
@@ -141,5 +143,41 @@ describe('RoomCard', () => {
     // Should render without error even without onPress (backward compat)
     const {getByText} = render(<RoomCard room={mockRoom} />);
     expect(getByText('Hotel Test')).toBeTruthy();
+  });
+
+  describe('discount display', () => {
+    it('does NOT render the original price when there is no discount', () => {
+      const {queryByTestId} = render(<RoomCard room={mockRoom} />);
+      expect(queryByTestId('room-card-original-price')).toBeNull();
+    });
+
+    it('renders both original (struck-through) and discounted prices', () => {
+      const discounted: Room = {
+        ...mockRoom,
+        precio: 360,
+        precioOriginal: 450,
+      };
+      const {getByTestId, getByText} = render(<RoomCard room={discounted} />);
+      const originalNode = getByTestId('room-card-original-price');
+      expect(originalNode).toBeTruthy();
+      // line-through style applied
+      const flatStyle = Array.isArray(originalNode.props.style)
+        ? Object.assign({}, ...originalNode.props.style)
+        : originalNode.props.style;
+      expect(flatStyle.textDecorationLine).toBe('line-through');
+      // both amounts visible
+      expect(getByText(/COP \$450/)).toBeTruthy();
+      expect(getByText(/COP \$360/)).toBeTruthy();
+    });
+
+    it('does NOT render the original price when precioOriginal <= precio', () => {
+      const noDiscount: Room = {
+        ...mockRoom,
+        precio: 400,
+        precioOriginal: 400,
+      };
+      const {queryByTestId} = render(<RoomCard room={noDiscount} />);
+      expect(queryByTestId('room-card-original-price')).toBeNull();
+    });
   });
 });

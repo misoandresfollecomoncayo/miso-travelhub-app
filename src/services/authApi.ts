@@ -1,4 +1,5 @@
 import {isStrongPassword} from '../utils/password';
+import {API_BASE_URL} from '../config/api';
 
 export interface User {
   id: string;
@@ -8,7 +9,6 @@ export interface User {
   token?: string;
 }
 
-const API_BASE_URL = 'https://apitravelhub.site';
 const LOGIN_ENDPOINT = `${API_BASE_URL}/api/v1/auth/login`;
 const REGISTER_ENDPOINT = `${API_BASE_URL}/api/v1/auth/register`;
 

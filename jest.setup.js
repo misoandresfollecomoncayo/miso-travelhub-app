@@ -1,5 +1,20 @@
 jest.mock('react-native-vector-icons/Ionicons', () => 'Icon');
 
+jest.mock('./src/preferences/PreferencesContext', () => {
+  return {
+    PreferencesProvider: ({children}) => children,
+    usePreferences: () => ({
+      language: 'es',
+      currency: 'COP',
+      initializing: false,
+      setLanguage: jest.fn(() => Promise.resolve()),
+      setCurrency: jest.fn(() => Promise.resolve()),
+    }),
+    SUPPORTED_LANGUAGES: ['es', 'en'],
+    SUPPORTED_CURRENCIES: ['COP', 'EUR', 'USD'],
+  };
+});
+
 jest.mock('@react-native-firebase/messaging', () => {
   const messagingMock = {
     requestPermission: jest.fn(() => Promise.resolve(1)),

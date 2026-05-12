@@ -53,6 +53,7 @@ const sampleBooking: BookingListItem = {
   distancia: '3 km',
   acceso: 'Metro',
   total: 1814400,
+  moneda: 'COP',
 };
 
 describe('ReservationsScreen', () => {
@@ -136,10 +137,28 @@ describe('ReservationsScreen', () => {
     expect(await findByText('1 huésped')).toBeTruthy();
   });
 
-  it('renders total formatted in es-CO', async () => {
+  it('renders total in the booking moneda (COP)', async () => {
     mockGetBookings.mockResolvedValueOnce([sampleBooking]);
     const {findByText} = render(<ReservationsScreen />);
     expect(await findByText(/COP \$1\.814\.400/)).toBeTruthy();
+  });
+
+  it('renders total in the booking moneda (USD) regardless of user preference', async () => {
+    mockGetBookings.mockResolvedValueOnce([
+      {...sampleBooking, total: 432, moneda: 'USD'},
+    ]);
+    const {findByText} = render(<ReservationsScreen />);
+    // El símbolo $ y dos decimales corresponden al format USD; no se
+    // convierte a la preferencia del usuario (mock global = COP).
+    expect(await findByText(/\$432\.00/)).toBeTruthy();
+  });
+
+  it('renders total in the booking moneda (EUR)', async () => {
+    mockGetBookings.mockResolvedValueOnce([
+      {...sampleBooking, total: 432, moneda: 'EUR'},
+    ]);
+    const {findByText} = render(<ReservationsScreen />);
+    expect(await findByText(/€432,00/)).toBeTruthy();
   });
 
   it('shows error state with retry button when fetch fails', async () => {

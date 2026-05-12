@@ -1,6 +1,6 @@
 import {Platform} from 'react-native';
+import {API_BASE_URL} from '../config/api';
 
-const API_BASE_URL = 'https://apitravelhub.site';
 const REGISTER_DEVICE_ENDPOINT = `${API_BASE_URL}/api/v1/notifications/register_device`;
 const UNREGISTER_DEVICE_ENDPOINT = `${API_BASE_URL}/api/v1/notifications/unregister_device`;
 

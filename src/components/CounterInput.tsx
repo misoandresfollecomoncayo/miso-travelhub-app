@@ -9,6 +9,11 @@ interface CounterInputProps {
   max?: number;
   onIncrement: () => void;
   onDecrement: () => void;
+  /**
+   * Identificador opcional para localización en pruebas E2E. Se compone
+   * como `counter-<testID>-dec`, `counter-<testID>-value`, `counter-<testID>-inc`.
+   */
+  testID?: string;
 }
 
 export const CounterInput: React.FC<CounterInputProps> = ({
@@ -18,6 +23,7 @@ export const CounterInput: React.FC<CounterInputProps> = ({
   max,
   onIncrement,
   onDecrement,
+  testID,
 }) => {
   const atMax = max !== undefined && value >= max;
 
@@ -26,6 +32,7 @@ export const CounterInput: React.FC<CounterInputProps> = ({
       <Text style={styles.label}>{label}</Text>
       <View style={styles.controls}>
         <TouchableOpacity
+          testID={testID ? `counter-${testID}-dec` : undefined}
           style={[styles.button, value <= min && styles.buttonDisabled]}
           onPress={onDecrement}
           disabled={value <= min}>
@@ -37,8 +44,13 @@ export const CounterInput: React.FC<CounterInputProps> = ({
             -
           </Text>
         </TouchableOpacity>
-        <Text style={styles.value}>{value}</Text>
+        <Text
+          testID={testID ? `counter-${testID}-value` : undefined}
+          style={styles.value}>
+          {value}
+        </Text>
         <TouchableOpacity
+          testID={testID ? `counter-${testID}-inc` : undefined}
           style={[styles.button, atMax && styles.buttonDisabled]}
           onPress={onIncrement}
           disabled={atMax}>

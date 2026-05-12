@@ -20,3 +20,14 @@ buildscript {
 }
 
 apply plugin: "com.facebook.react.rootproject"
+
+// Detox publica su AAR como un repositorio maven local dentro de su tarball
+// de npm. Lo añadimos a todos los subproyectos para que `com.wix:detox:+`
+// pueda resolverse al compilar `assembleAndroidTest`.
+allprojects {
+    repositories {
+        maven {
+            url("$rootDir/../node_modules/detox/Detox-android")
+        }
+    }
+}

@@ -1,4 +1,5 @@
 import {login, register} from '../../src/services/authApi';
+import {API_BASE_URL} from '../../src/config/api';
 
 const makeResponse = (body: unknown, ok = true, status = 200) =>
   Promise.resolve({
@@ -29,7 +30,7 @@ describe('authApi.login', () => {
     );
     await login('john@example.com', 'secret');
     const [url, options] = (globalThis.fetch as jest.Mock).mock.calls[0];
-    expect(url).toBe('https://apitravelhub.site/api/v1/auth/login');
+    expect(url).toBe(`${API_BASE_URL}/api/v1/auth/login`);
     expect(options.method).toBe('POST');
     expect(options.headers['Content-Type']).toBe('application/json');
     expect(JSON.parse(options.body)).toEqual({
@@ -171,7 +172,7 @@ describe('authApi.register', () => {
     );
     await register(validParams);
     const [url, options] = (globalThis.fetch as jest.Mock).mock.calls[0];
-    expect(url).toBe('https://apitravelhub.site/api/v1/auth/register');
+    expect(url).toBe(`${API_BASE_URL}/api/v1/auth/register`);
     expect(options.method).toBe('POST');
     expect(JSON.parse(options.body)).toEqual({
       email: 'user@example.com',

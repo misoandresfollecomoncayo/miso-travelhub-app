@@ -1,5 +1,33 @@
 import React from 'react';
 import {render, fireEvent, waitFor} from '@testing-library/react-native';
+
+let mockAuthUser: {token: string; id: string; name: string; email: string} | null = null;
+let mockPrefsCurrency: 'COP' | 'EUR' | 'USD' = 'COP';
+
+jest.mock('../../src/auth/AuthContext', () => ({
+  useAuth: () => ({
+    user: mockAuthUser,
+    initializing: false,
+    loading: false,
+    login: jest.fn(),
+    register: jest.fn(),
+    logout: jest.fn(),
+  }),
+}));
+
+jest.mock('../../src/preferences/PreferencesContext', () => ({
+  PreferencesProvider: ({children}: {children: React.ReactNode}) => children,
+  usePreferences: () => ({
+    language: 'es',
+    currency: mockPrefsCurrency,
+    initializing: false,
+    setLanguage: jest.fn(),
+    setCurrency: jest.fn(),
+  }),
+  SUPPORTED_LANGUAGES: ['es', 'en'],
+  SUPPORTED_CURRENCIES: ['COP', 'EUR', 'USD'],
+}));
+
 import {ResultsScreen} from '../../src/screens/ResultsScreen';
 
 const mockGoBack = jest.fn();
@@ -64,6 +92,8 @@ const mockApiRooms = [
 describe('ResultsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAuthUser = null;
+    mockPrefsCurrency = 'COP';
     globalThis.fetch = jest.fn(() =>
       Promise.resolve({
         ok: true,
@@ -89,6 +119,43 @@ describe('ResultsScreen', () => {
     expect(calledUrl).toContain('checkout=2026-01-23');
     expect(calledUrl).toContain('group=2');
     expect(calledUrl).toContain('rooms=1');
+  });
+
+  it('uses moneda=COP when there is no user session', async () => {
+    mockAuthUser = null;
+    mockPrefsCurrency = 'EUR'; // Aunque la pref sea EUR, sin sesión va COP
+    render(<ResultsScreen />);
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
+    const url = (globalThis.fetch as jest.Mock).mock.calls[0][0] as string;
+    expect(url).toContain('moneda=COP');
+  });
+
+  it('uses the user preferred currency when session is active', async () => {
+    mockAuthUser = {
+      id: 'u-1',
+      name: 'Test',
+      email: 'test@x.com',
+      token: 'tok',
+    };
+    mockPrefsCurrency = 'EUR';
+    render(<ResultsScreen />);
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
+    const url = (globalThis.fetch as jest.Mock).mock.calls[0][0] as string;
+    expect(url).toContain('moneda=EUR');
+  });
+
+  it('uses USD when session preference is USD', async () => {
+    mockAuthUser = {
+      id: 'u-1',
+      name: 'Test',
+      email: 'test@x.com',
+      token: 'tok',
+    };
+    mockPrefsCurrency = 'USD';
+    render(<ResultsScreen />);
+    await waitFor(() => expect(globalThis.fetch).toHaveBeenCalled());
+    const url = (globalThis.fetch as jest.Mock).mock.calls[0][0] as string;
+    expect(url).toContain('moneda=USD');
   });
 
   it('renders title with accommodation count after load', async () => {
@@ -138,13 +205,17 @@ describe('ResultsScreen', () => {
     expect(await findByText('Hotel Boutique Santo Toribio')).toBeTruthy();
   });
 
-  it('renders error message when fetch fails', async () => {
+  it('renders the network error message when fetch rejects', async () => {
     (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
-      Promise.reject(new Error('Network down')),
+      Promise.reject(new Error('boom')),
     );
     const {findByText} = render(<ResultsScreen />);
     expect(await findByText(/No se pudieron cargar/)).toBeTruthy();
-    expect(await findByText('Network down')).toBeTruthy();
+    // El servicio mapea cualquier fetch reject a 'NETWORK_ERROR' y la UI lo
+    // traduce a un mensaje legible.
+    expect(
+      await findByText(/No se pudo conectar con el servidor/),
+    ).toBeTruthy();
   });
 
   it('renders empty state when response has no rooms', async () => {
@@ -177,15 +248,18 @@ describe('ResultsScreen', () => {
     expect(await findByText('No se pudieron cargar los hospedajes')).toBeTruthy();
   });
 
-  it('renders generic error for non-Error rejection', async () => {
+  it('renders network error for any fetch rejection (incl. non-Error)', async () => {
     (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
       Promise.reject('string error'),
     );
     const {findByText} = render(<ResultsScreen />);
-    expect(await findByText('Error desconocido')).toBeTruthy();
+    // Cualquier reject de fetch se mapea a NETWORK_ERROR en searchApi.
+    expect(
+      await findByText(/No se pudo conectar con el servidor/),
+    ).toBeTruthy();
   });
 
-  it('renders HTTP error from non-ok response', async () => {
+  it('renders generic error from non-ok response with no detail', async () => {
     (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
       Promise.resolve({
         ok: false,
@@ -194,7 +268,32 @@ describe('ResultsScreen', () => {
       }),
     );
     const {findByText} = render(<ResultsScreen />);
-    expect(await findByText(/Error 503/)).toBeTruthy();
+    expect(await findByText('No se pudieron cargar los hospedajes.')).toBeTruthy();
+  });
+
+  it('renders friendly "checkin past" error when backend returns detail', async () => {
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      Promise.resolve({
+        ok: false,
+        status: 400,
+        json: () =>
+          Promise.resolve({detail: 'the check-in date is lower than today'}),
+      }),
+    );
+    const {findByText} = render(<ResultsScreen />);
+    expect(await findByText(/La fecha de entrada ya pasó/)).toBeTruthy();
+  });
+
+  it('falls back to raw detail when no friendly mapping matches', async () => {
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      Promise.resolve({
+        ok: false,
+        status: 400,
+        json: () => Promise.resolve({detail: 'unrecognized backend message'}),
+      }),
+    );
+    const {findByText} = render(<ResultsScreen />);
+    expect(await findByText('unrecognized backend message')).toBeTruthy();
   });
 
   it('renders adults label in summary', async () => {
@@ -218,8 +317,10 @@ describe('ResultsScreen', () => {
       expect.objectContaining({
         room: expect.objectContaining({
           nombreHotel: 'Hotel Casa del Coliseo',
-          // 123456 EUR * 4200 (TRM EUR→COP) = 518515200 COP
-          precio: 518515200,
+          // El mock devuelve {precio: 123456} sin moneda; el backend ahora
+          // siempre responde en la moneda solicitada (COP por default), así
+          // que se preserva tal cual sin conversión.
+          precio: 123456,
         }),
         nights: expect.any(Number),
         destination: 'Cartagena, Colombia',

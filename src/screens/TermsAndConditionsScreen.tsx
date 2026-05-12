@@ -5,6 +5,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {Colors} from '../theme/colors';
+import {useT} from '../i18n/useT';
 import {UserStackParamList} from '../navigation/UserStackNavigator';
 
 type TermsNavigationProp = NativeStackNavigationProp<
@@ -30,6 +31,7 @@ Quisque cursus, metus vitae pharetra auctor, sem massa mattis sem, at interdum m
 
 export const TermsAndConditionsScreen: React.FC = () => {
   const navigation = useNavigation<TermsNavigationProp>();
+  const t = useT();
 
   return (
     <View style={styles.container}>
@@ -40,11 +42,11 @@ export const TermsAndConditionsScreen: React.FC = () => {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
             accessibilityRole="button"
-            accessibilityLabel="Volver"
+            accessibilityLabel={t('common.back')}
             hitSlop={{top: 12, bottom: 12, left: 12, right: 12}}>
             <Icon name="arrow-back" size={24} color={Colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Términos y condiciones</Text>
+          <Text style={styles.headerTitle}>{t('terms.headerTitle')}</Text>
           <View style={styles.headerSpacer} />
         </View>
       </SafeAreaView>
@@ -53,7 +55,7 @@ export const TermsAndConditionsScreen: React.FC = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Términos y condiciones de uso</Text>
+        <Text style={styles.title}>{t('terms.bodyTitle')}</Text>
         <Text style={styles.body} testID="terms-body">
           {TERMS_TEXT}
         </Text>

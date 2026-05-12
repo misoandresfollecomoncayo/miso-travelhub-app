@@ -15,7 +15,9 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {Colors} from '../theme/colors';
 import {useAuth} from '../auth/AuthContext';
 import {getBookings, BookingListItem} from '../services/bookingApi';
-import {formatPrice} from '../utils/format';
+import {formatAmount} from '../utils/currency';
+import {useT, useDates} from '../i18n/useT';
+import {TranslationKey} from '../i18n/translations';
 import {resolveImage} from '../utils/images';
 import {ReservationsStackParamList} from '../navigation/ReservationsStackNavigator';
 
@@ -24,63 +26,53 @@ type ReservationsNavigationProp = NativeStackNavigationProp<
   'ReservationsList'
 >;
 
-const MONTH_NAMES_LOWER = [
-  'ene',
-  'feb',
-  'mar',
-  'abr',
-  'may',
-  'jun',
-  'jul',
-  'ago',
-  'sep',
-  'oct',
-  'nov',
-  'dic',
-];
-
-const formatDate = (iso: string): string => {
-  if (!iso) {
-    return '';
-  }
-  // Acepta tanto YYYY-MM-DD como YYYY-MM-DDTHH:mm:ssZ
-  const dayPart = iso.slice(0, 10);
-  const [y, m, d] = dayPart.split('-').map(n => Number(n));
-  if (!y || !m || !d) {
-    return iso;
-  }
-  return `${d} ${MONTH_NAMES_LOWER[m - 1]} ${y}`;
-};
-
-const formatDateRange = (checkin: string, checkout: string): string => {
-  return `${formatDate(checkin)} → ${formatDate(checkout)}`;
-};
+const buildFormatDate = (monthShort: (m: number) => string) =>
+  (iso: string): string => {
+    if (!iso) {
+      return '';
+    }
+    // Acepta tanto YYYY-MM-DD como YYYY-MM-DDTHH:mm:ssZ
+    const dayPart = iso.slice(0, 10);
+    const [y, m, d] = dayPart.split('-').map(n => Number(n));
+    if (!y || !m || !d) {
+      return iso;
+    }
+    return `${d} ${monthShort(m - 1)} ${y}`;
+  };
 
 interface StatusStyle {
-  label: string;
+  labelKey: TranslationKey | null;
+  rawLabel: string;
   bg: string;
   fg: string;
 }
 
-const STATUS_STYLES: Record<string, StatusStyle> = {
-  PENDIENTE: {label: 'Pendiente', bg: '#FFF3E0', fg: '#E65100'},
-  CONFIRMADA: {label: 'Confirmada', bg: '#E8F5E9', fg: '#2E7D32'},
-  CONFIRMADO: {label: 'Confirmada', bg: '#E8F5E9', fg: '#2E7D32'},
-  COMPLETADA: {label: 'Completada', bg: '#E3F2FD', fg: '#1565C0'},
-  COMPLETADO: {label: 'Completada', bg: '#E3F2FD', fg: '#1565C0'},
-  CANCELADA: {label: 'Cancelada', bg: '#FFEBEE', fg: '#C62828'},
-  CANCELADO: {label: 'Cancelada', bg: '#FFEBEE', fg: '#C62828'},
+const STATUS_STYLES: Record<
+  string,
+  Omit<StatusStyle, 'rawLabel'> & {labelKey: TranslationKey}
+> = {
+  PENDIENTE: {labelKey: 'reservations.status.pending', bg: '#E65100', fg: '#FFFFFF'},
+  CONFIRMADA: {labelKey: 'reservations.status.confirmed', bg: '#1565C0', fg: '#FFF'},
+  CONFIRMADO: {labelKey: 'reservations.status.confirmed', bg: '#1565C0', fg: '#FFF'},
+  PAGADA: {labelKey: 'reservations.status.paid', bg: '#2E7D32', fg: '#FFF'},
+  COMPLETADA: {labelKey: 'reservations.status.completed', bg: '#E3F2FD', fg: '#1565C0'},
+  COMPLETADO: {labelKey: 'reservations.status.completed', bg: '#E3F2FD', fg: '#1565C0'},
+  CANCELADA: {labelKey: 'reservations.status.cancelled', bg: '#C62828', fg: '#FFF'},
+  CANCELADO: {labelKey: 'reservations.status.cancelled', bg: '#C62828', fg: '#FFF'},
 };
 
 const getStatusStyle = (status: string): StatusStyle => {
   const upper = (status || '').toUpperCase();
-  return (
-    STATUS_STYLES[upper] || {
-      label: status || 'Sin estado',
-      bg: Colors.grayLight,
-      fg: Colors.textSecondary,
-    }
-  );
+  const known = STATUS_STYLES[upper];
+  if (known) {
+    return {labelKey: known.labelKey, rawLabel: '', bg: known.bg, fg: known.fg};
+  }
+  return {
+    labelKey: null,
+    rawLabel: status || '',
+    bg: Colors.grayLight,
+    fg: Colors.textSecondary,
+  };
 };
 
 interface BookingCardProps {
@@ -89,11 +81,21 @@ interface BookingCardProps {
 }
 
 const BookingCard: React.FC<BookingCardProps> = ({booking, onPress}) => {
+  const t = useT();
+  const {monthShort} = useDates();
+  const formatDate = buildFormatDate(monthShort);
+  const formatDateRange = (ci: string, co: string) =>
+    `${formatDate(ci)} → ${formatDate(co)}`;
   const status = getStatusStyle(booking.estado);
+  const statusLabel = status.labelKey
+    ? t(status.labelKey)
+    : status.rawLabel || t('reservations.status.unknown');
   const cover = resolveImage(booking.imagenes);
   const ciudadPais = [booking.ciudad, booking.pais].filter(Boolean).join(', ');
   const guestsLabel =
-    booking.numHuespedes === 1 ? '1 huésped' : `${booking.numHuespedes} huéspedes`;
+    booking.numHuespedes === 1
+      ? t('reservations.guestSingular')
+      : t('reservations.guestPlural', {n: booking.numHuespedes});
 
   return (
     <TouchableOpacity
@@ -101,7 +103,9 @@ const BookingCard: React.FC<BookingCardProps> = ({booking, onPress}) => {
       testID={`booking-card-${booking.id}`}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`Ver detalle de la reserva en ${booking.nombreHotel}`}
+      accessibilityLabel={t('reservations.viewBookingAccessibility', {
+        hotel: booking.nombreHotel,
+      })}
       activeOpacity={0.7}>
       <Image source={{uri: cover}} style={styles.cardImage} />
       <View style={styles.cardBody}>
@@ -111,7 +115,7 @@ const BookingCard: React.FC<BookingCardProps> = ({booking, onPress}) => {
           </Text>
           <View style={[styles.statusBadge, {backgroundColor: status.bg}]}>
             <Text style={[styles.statusText, {color: status.fg}]}>
-              {status.label}
+              {statusLabel}
             </Text>
           </View>
         </View>
@@ -142,7 +146,7 @@ const BookingCard: React.FC<BookingCardProps> = ({booking, onPress}) => {
           <Text style={styles.metaText}>{guestsLabel}</Text>
         </View>
         <Text style={styles.totalText}>
-          Total: <Text style={styles.totalAmount}>COP ${formatPrice(booking.total)}</Text>
+          {t('reservations.totalLabel')}<Text style={styles.totalAmount}>{formatAmount(booking.total, booking.moneda)}</Text>
         </Text>
       </View>
     </TouchableOpacity>
@@ -152,6 +156,7 @@ const BookingCard: React.FC<BookingCardProps> = ({booking, onPress}) => {
 export const ReservationsScreen: React.FC = () => {
   const {user, initializing} = useAuth();
   const navigation = useNavigation<ReservationsNavigationProp>();
+  const t = useT();
   const userToken = user?.token ?? null;
   const [bookings, setBookings] = useState<BookingListItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -167,10 +172,8 @@ export const ReservationsScreen: React.FC = () => {
       const data = await getBookings(userToken);
       setBookings(data);
     } catch (err) {
-      const message =
-        err instanceof Error
-          ? err.message
-          : 'No se pudieron cargar las reservas';
+      // Mensaje sin traducir aquí — al renderizar se traduce el fallback.
+      const message = err instanceof Error ? err.message : 'fallback';
       setError(message);
       setBookings([]);
     } finally {
@@ -189,7 +192,7 @@ export const ReservationsScreen: React.FC = () => {
   if (initializing) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.centerWrapper}>
+        <View style={styles.fullCenterWrapper}>
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>
       </SafeAreaView>
@@ -199,16 +202,16 @@ export const ReservationsScreen: React.FC = () => {
   if (!user) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <Text style={styles.title}>Reservas</Text>
-        <View style={styles.centerWrapper}>
+        <Text style={styles.standaloneTitle}>{t('reservations.title')}</Text>
+        <View style={styles.fullCenterWrapper}>
           <Icon
             name="lock-closed-outline"
             size={56}
             color={Colors.textSecondary}
           />
-          <Text style={styles.emptyTitle}>Inicia sesión</Text>
+          <Text style={styles.emptyTitle}>{t('reservations.notLoggedInTitle')}</Text>
           <Text style={styles.emptySubtitle}>
-            Inicia sesión para ver tus reservas.
+            {t('reservations.notLoggedInSubtitle')}
           </Text>
         </View>
       </SafeAreaView>
@@ -218,10 +221,10 @@ export const ReservationsScreen: React.FC = () => {
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <Text style={styles.title}>Reservas</Text>
-        <View style={styles.centerWrapper} testID="reservations-loading">
+        <Text style={styles.standaloneTitle}>{t('reservations.title')}</Text>
+        <View style={styles.fullCenterWrapper} testID="reservations-loading">
           <ActivityIndicator size="large" color={Colors.primary} />
-          <Text style={styles.loadingText}>Cargando reservas...</Text>
+          <Text style={styles.loadingText}>{t('reservations.loadingText')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -230,23 +233,25 @@ export const ReservationsScreen: React.FC = () => {
   if (error && bookings.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <Text style={styles.title}>Reservas</Text>
-        <View style={styles.centerWrapper}>
+        <Text style={styles.standaloneTitle}>{t('reservations.title')}</Text>
+        <View style={styles.fullCenterWrapper}>
           <Icon
             name="cloud-offline-outline"
             size={56}
             color={Colors.textSecondary}
           />
-          <Text style={styles.emptyTitle}>No se pudieron cargar tus reservas</Text>
-          <Text style={styles.emptySubtitle}>{error}</Text>
+          <Text style={styles.emptyTitle}>{t('reservations.errorTitle')}</Text>
+          <Text style={styles.emptySubtitle}>
+            {error === 'fallback' ? t('reservations.errorFallback') : error}
+          </Text>
           <TouchableOpacity
             testID="reservations-retry"
             style={styles.retryButton}
             onPress={fetchBookings}
             accessibilityRole="button"
-            accessibilityLabel="Reintentar"
+            accessibilityLabel={t('common.retry')}
             activeOpacity={0.85}>
-            <Text style={styles.retryText}>REINTENTAR</Text>
+            <Text style={styles.retryText}>{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -256,12 +261,12 @@ export const ReservationsScreen: React.FC = () => {
   if (bookings.length === 0) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <Text style={styles.title}>Reservas</Text>
-        <View style={styles.centerWrapper}>
+        <Text style={styles.standaloneTitle}>{t('reservations.title')}</Text>
+        <View style={styles.fullCenterWrapper}>
           <Icon name="bed-outline" size={56} color={Colors.textSecondary} />
-          <Text style={styles.emptyTitle}>Aún no tienes reservas</Text>
+          <Text style={styles.emptyTitle}>{t('reservations.emptyTitle')}</Text>
           <Text style={styles.emptySubtitle}>
-            Cuando hagas una reserva la verás aquí.
+            {t('reservations.emptySubtitle')}
           </Text>
         </View>
       </SafeAreaView>
@@ -271,13 +276,13 @@ export const ReservationsScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Reservas</Text>
+        <Text style={styles.title}>{t('reservations.title')}</Text>
         <TouchableOpacity
           testID="reservations-refresh"
           style={styles.refreshButton}
           onPress={fetchBookings}
           accessibilityRole="button"
-          accessibilityLabel="Actualizar reservas"
+          accessibilityLabel={t('reservations.refreshAccessibility')}
           hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
           <Icon name="refresh" size={20} color={Colors.primary} />
         </TouchableOpacity>
@@ -322,6 +327,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginLeft: 32,
   },
+  // Variante para estados vacíos: título solo, sin botón al lado, así no
+  // necesita compensar margen por el ícono de refresh.
+  standaloneTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: 8,
+  },
   refreshButton: {
     width: 32,
     height: 32,
@@ -333,6 +348,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
+  },
+  // Para los estados vacíos (sin sesión, error, sin reservas, loading inicial):
+  // ocupa toda la pantalla y centra el contenido visualmente, compensando el
+  // espacio que ocupa la tab bar inferior.
+  fullCenterWrapper: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingBottom: 80,
   },
   loadingText: {
     marginTop: 12,

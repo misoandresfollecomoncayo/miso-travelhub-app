@@ -13,12 +13,15 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {Calendar} from '../components/Calendar';
 import {CounterInput} from '../components/CounterInput';
 import {Colors} from '../theme/colors';
+import {useT, useDates} from '../i18n/useT';
 import {SearchStackParamList} from '../navigation/SearchStackNavigator';
 
 type NavigationProp = NativeStackNavigationProp<SearchStackParamList, 'Search'>;
 
 export const SearchScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
+  const t = useT();
+  const {monthFull} = useDates();
 
   const today = new Date();
   const [destination, setDestination] = useState('');
@@ -67,21 +70,6 @@ export const SearchScreen: React.FC = () => {
     setEndDate(null);
   };
 
-  const MONTH_NAMES = [
-    'enero',
-    'febrero',
-    'marzo',
-    'abril',
-    'mayo',
-    'junio',
-    'julio',
-    'agosto',
-    'septiembre',
-    'octubre',
-    'noviembre',
-    'diciembre',
-  ];
-
   const formatIsoDate = (year: number, month: number, day: number): string => {
     const mm = String(month + 1).padStart(2, '0');
     const dd = String(day).padStart(2, '0');
@@ -93,7 +81,7 @@ export const SearchScreen: React.FC = () => {
       return;
     }
 
-    const monthName = MONTH_NAMES[currentMonth];
+    const monthName = monthFull(currentMonth);
     const dateRange = `${startDate} ${monthName} ${currentYear} - ${endDate} ${monthName} ${currentYear}`;
 
     const ciudad = destination.split(',')[0].trim();
@@ -116,15 +104,16 @@ export const SearchScreen: React.FC = () => {
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Buscar hospedaje</Text>
+        <Text style={styles.title}>{t('search.title')}</Text>
 
         <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>Destino:</Text>
+          <Text style={styles.inputLabel}>{t('search.destination')}</Text>
           <TextInput
+            testID="search-destination"
             style={styles.input}
             value={destination}
             onChangeText={setDestination}
-            placeholder="Ciudad, país"
+            placeholder={t('search.destinationPlaceholder')}
           />
         </View>
 
@@ -139,7 +128,8 @@ export const SearchScreen: React.FC = () => {
         />
 
         <CounterInput
-          label="Número de adultos"
+          testID="search-adults"
+          label={t('search.adults')}
           value={adults}
           min={1}
           onIncrement={() => setAdults(adults + 1)}
@@ -147,7 +137,8 @@ export const SearchScreen: React.FC = () => {
         />
 
         <CounterInput
-          label="Número de niños"
+          testID="search-children"
+          label={t('search.children')}
           value={children}
           min={0}
           onIncrement={() => setChildren(children + 1)}
@@ -155,7 +146,8 @@ export const SearchScreen: React.FC = () => {
         />
 
         <CounterInput
-          label="Número de habitaciones"
+          testID="search-rooms"
+          label={t('search.rooms')}
           value={rooms}
           min={1}
           onIncrement={() => setRooms(rooms + 1)}
@@ -167,7 +159,7 @@ export const SearchScreen: React.FC = () => {
           style={[styles.searchButton, !isFormValid && styles.searchButtonDisabled]}
           onPress={handleSearch}
           disabled={!isFormValid}>
-          <Text style={styles.searchButtonText}>BUSCAR</Text>
+          <Text style={styles.searchButtonText}>{t('search.searchButton')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

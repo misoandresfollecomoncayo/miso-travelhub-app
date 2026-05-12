@@ -58,22 +58,69 @@ describe('searchRooms', () => {
     expect(url).toContain('rooms=1');
   });
 
+  it('defaults moneda to COP when not provided', async () => {
+    await searchRooms(defaultParams);
+    const url = (globalThis.fetch as jest.Mock).mock.calls[0][0] as string;
+    expect(url).toContain('moneda=COP');
+  });
+
+  it('passes the provided moneda upper-cased', async () => {
+    await searchRooms({...defaultParams, moneda: 'eur'});
+    const url = (globalThis.fetch as jest.Mock).mock.calls[0][0] as string;
+    expect(url).toContain('moneda=EUR');
+  });
+
+  it('passes USD when moneda is USD', async () => {
+    await searchRooms({...defaultParams, moneda: 'USD'});
+    const url = (globalThis.fetch as jest.Mock).mock.calls[0][0] as string;
+    expect(url).toContain('moneda=USD');
+  });
+
   // --- HTTP error handling ---
 
-  it('throws on non-ok response', async () => {
+  it('throws with HTTP_<status> sentinel when body has no detail', async () => {
     (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
       makeResponse(null, false, 500),
     );
-    await expect(searchRooms(defaultParams)).rejects.toThrow(
-      'Error 500 al consultar hospedajes',
-    );
+    await expect(searchRooms(defaultParams)).rejects.toThrow('HTTP_500');
   });
 
-  it('throws on 404 response', async () => {
+  it('throws with HTTP_404 sentinel on 404 with no detail', async () => {
     (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
       makeResponse(null, false, 404),
     );
-    await expect(searchRooms(defaultParams)).rejects.toThrow('Error 404');
+    await expect(searchRooms(defaultParams)).rejects.toThrow('HTTP_404');
+  });
+
+  it('propagates the backend detail message on 400 errors', async () => {
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      makeResponse(
+        {detail: 'the check-in date is lower than today'},
+        false,
+        400,
+      ),
+    );
+    await expect(searchRooms(defaultParams)).rejects.toThrow(
+      'the check-in date is lower than today',
+    );
+  });
+
+  it('propagates the first validation msg when detail is an array (422)', async () => {
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      makeResponse(
+        {detail: [{msg: 'field required', loc: ['query', 'ciudad']}]},
+        false,
+        422,
+      ),
+    );
+    await expect(searchRooms(defaultParams)).rejects.toThrow('field required');
+  });
+
+  it('throws NETWORK_ERROR sentinel when fetch rejects', async () => {
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      Promise.reject(new Error('boom')),
+    );
+    await expect(searchRooms(defaultParams)).rejects.toThrow('NETWORK_ERROR');
   });
 
   // --- payload handling ---
@@ -131,8 +178,10 @@ describe('searchRooms', () => {
     const room = rooms[0];
     expect(room.id).toBe('abc-123');
     expect(room.nombreHotel).toBe('Hotel Test');
-    // 90 EUR * 4200 (TRM) = 378000 COP
-    expect(room.precio).toBe(378000);
+    // Precio + moneda se preservan tal cual los devuelve el backend (sin
+    // conversión interna).
+    expect(room.precio).toBe(90);
+    expect(room.moneda).toBe('EUR');
     expect(room.direccion).toBe('Calle 10');
     expect(room.capacidadMaxima).toBe(3);
     expect(room.distancia).toBe('2 km');
@@ -202,13 +251,14 @@ describe('searchRooms', () => {
 
   // --- toNumber edge cases ---
 
-  it('converts string precio to number (and applies EUR→COP)', async () => {
+  it('converts string precio to number and preserves moneda', async () => {
     (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
       makeResponse([{precio: '85', moneda: 'EUR'}]),
     );
     const rooms = await searchRooms(defaultParams);
-    // 85 EUR * 4200 = 357000 COP
-    expect(rooms[0].precio).toBe(357000);
+    // Sin conversión: precio se preserva tal cual en la moneda del backend.
+    expect(rooms[0].precio).toBe(85);
+    expect(rooms[0].moneda).toBe('EUR');
   });
 
   it('preserves precio as-is when API returns moneda COP', async () => {
@@ -219,13 +269,14 @@ describe('searchRooms', () => {
     expect(rooms[0].precio).toBe(250000);
   });
 
-  it('treats missing moneda as EUR (converts to COP)', async () => {
+  it('treats missing moneda as COP (the requested currency, no conversion)', async () => {
     (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
       makeResponse([{precio: 100}]),
     );
     const rooms = await searchRooms(defaultParams);
-    // 100 EUR * 4200 = 420000 COP
-    expect(rooms[0].precio).toBe(420000);
+    // El backend ahora siempre devuelve la moneda solicitada; si el campo
+    // viene ausente asumimos COP (no conversión).
+    expect(rooms[0].precio).toBe(100);
   });
 
   it('falls back to 0 for NaN precio', async () => {
@@ -250,6 +301,140 @@ describe('searchRooms', () => {
     );
     const rooms = await searchRooms(defaultParams);
     expect(rooms[0].precio).toBe(0);
+  });
+
+  // --- precio por noche: derivado de subtotal_con_descuento ÷ noches ---
+
+  it('computes precio por noche from subtotal_con_descuento divided by nights', async () => {
+    // defaultParams: 2026-05-01 → 2026-05-05 = 4 noches
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      makeResponse([
+        {subtotal_con_descuento: 1565217.39, moneda: 'COP'},
+      ]),
+    );
+    const rooms = await searchRooms(defaultParams);
+    // 1565217.39 / 4 ≈ 391304.35 → redondeado 391304
+    expect(rooms[0].precio).toBe(391304);
+  });
+
+  it('uses subtotal_con_descuento when both subtotals are present', async () => {
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      makeResponse([
+        {
+          subtotal_sin_descuento: 2000000,
+          subtotal_con_descuento: 1800000, // 1800000 / 4 = 450000
+          moneda: 'COP',
+        },
+      ]),
+    );
+    const rooms = await searchRooms(defaultParams);
+    expect(rooms[0].precio).toBe(450000);
+  });
+
+  it('falls back to subtotal_sin_descuento when con_descuento is missing/0', async () => {
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      makeResponse([
+        {subtotal_sin_descuento: 2000000, moneda: 'COP'}, // 2000000 / 4 = 500000
+      ]),
+    );
+    const rooms = await searchRooms(defaultParams);
+    expect(rooms[0].precio).toBe(500000);
+  });
+
+  it('treats precio field as per-night when only `precio` is provided', async () => {
+    // Backwards-compatible path: si el backend devolviera un campo `precio`
+    // simple, se asume que YA es por noche (no se divide).
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      makeResponse([{precio: 350000, moneda: 'COP'}]),
+    );
+    const rooms = await searchRooms(defaultParams);
+    expect(rooms[0].precio).toBe(350000);
+  });
+
+  it('preserves EUR subtotal as-is when backend returns EUR', async () => {
+    // 400 EUR / 4 noches = 100 EUR/noche (sin conversión interna).
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      makeResponse([
+        {subtotal_con_descuento: 400, moneda: 'EUR'},
+      ]),
+    );
+    const rooms = await searchRooms(defaultParams);
+    expect(rooms[0].precio).toBe(100);
+    expect(rooms[0].moneda).toBe('EUR');
+  });
+
+  it('handles invalid checkin/checkout by defaulting to 1 night', async () => {
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      makeResponse([
+        {subtotal_con_descuento: 500000, moneda: 'COP'},
+      ]),
+    );
+    const rooms = await searchRooms({
+      ...defaultParams,
+      checkin: 'not-a-date',
+      checkout: 'also-not-a-date',
+    });
+    // 500000 / 1 = 500000 (no divide-by-zero, fallback a 1 noche)
+    expect(rooms[0].precio).toBe(500000);
+  });
+
+  // --- precioOriginal: detección de descuento ---
+
+  it('exposes precioOriginal when sin_descuento > con_descuento', async () => {
+    // sin 2.000.000 / 4 = 500.000  ·  con 1.600.000 / 4 = 400.000
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      makeResponse([
+        {
+          subtotal_sin_descuento: 2000000,
+          subtotal_con_descuento: 1600000,
+          moneda: 'COP',
+        },
+      ]),
+    );
+    const rooms = await searchRooms(defaultParams);
+    expect(rooms[0].precio).toBe(400000);
+    expect(rooms[0].precioOriginal).toBe(500000);
+  });
+
+  it('omits precioOriginal when there is no discount (sin = con)', async () => {
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      makeResponse([
+        {
+          subtotal_sin_descuento: 2000000,
+          subtotal_con_descuento: 2000000,
+          moneda: 'COP',
+        },
+      ]),
+    );
+    const rooms = await searchRooms(defaultParams);
+    expect(rooms[0].precioOriginal).toBeUndefined();
+  });
+
+  it('omits precioOriginal when only one of the subtotals is present', async () => {
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      makeResponse([
+        {subtotal_con_descuento: 1600000, moneda: 'COP'},
+      ]),
+    );
+    const rooms = await searchRooms(defaultParams);
+    expect(rooms[0].precioOriginal).toBeUndefined();
+  });
+
+  it('preserves precioOriginal in EUR when backend returns EUR', async () => {
+    // sin 500 EUR / 4 = 125 EUR/noche  ·  con 400 EUR / 4 = 100 EUR/noche
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      makeResponse([
+        {
+          subtotal_sin_descuento: 500,
+          subtotal_con_descuento: 400,
+          moneda: 'EUR',
+        },
+      ]),
+    );
+    const rooms = await searchRooms(defaultParams);
+    expect(rooms[0].precio).toBe(100);
+    expect(rooms[0].precioOriginal).toBe(125);
+    expect(rooms[0].moneda).toBe('EUR');
   });
 
   // --- toStringArray edge cases ---
@@ -278,12 +463,4 @@ describe('searchRooms', () => {
     expect(rooms[0].amenidades).toEqual([]);
   });
 
-  // --- network error ---
-
-  it('propagates network errors', async () => {
-    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
-      Promise.reject(new Error('Network error')),
-    );
-    await expect(searchRooms(defaultParams)).rejects.toThrow('Network error');
-  });
 });

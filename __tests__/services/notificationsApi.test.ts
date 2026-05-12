@@ -3,6 +3,7 @@ import {
   registerDeviceToken,
   unregisterDeviceToken,
 } from '../../src/services/notificationsApi';
+import {API_BASE_URL} from '../../src/config/api';
 
 const makeResponse = (ok = true) =>
   Promise.resolve({
@@ -26,7 +27,7 @@ describe('notificationsApi', () => {
       await registerDeviceToken({fcmToken: 'fcm-1', token: 'jwt-1'});
       const [url, options] = (globalThis.fetch as jest.Mock).mock.calls[0];
       expect(url).toBe(
-        'https://apitravelhub.site/api/v1/notifications/register_device',
+        `${API_BASE_URL}/api/v1/notifications/register_device`,
       );
       expect(options.method).toBe('POST');
       expect(options.headers.Authorization).toBe('Bearer jwt-1');
@@ -75,7 +76,7 @@ describe('notificationsApi', () => {
       await unregisterDeviceToken({fcmToken: 'fcm-1', token: 'jwt-1'});
       const [url, options] = (globalThis.fetch as jest.Mock).mock.calls[0];
       expect(url).toBe(
-        'https://apitravelhub.site/api/v1/notifications/unregister_device',
+        `${API_BASE_URL}/api/v1/notifications/unregister_device`,
       );
       expect(options.method).toBe('POST');
       expect(options.headers.Authorization).toBe('Bearer jwt-1');

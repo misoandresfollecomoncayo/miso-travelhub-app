@@ -31,6 +31,8 @@ const mockRoom: Room = {
   id: 'room-1',
   nombreHotel: 'Hotel Casa del Coliseo',
   precio: 100000,
+  precioConImpuestos: 120000,
+  moneda: 'COP',
   direccion: 'Calle 10',
   capacidadMaxima: 2,
   distancia: '3 km',
@@ -110,16 +112,18 @@ describe('ReservationScreen', () => {
   });
 
   it('renders IVA 19% line', () => {
-    // 400000 * 0.19 = 76000
+    // precio con impuestos del backend = 120.000/noche × 4 = 480.000
+    // subtotal = 100.000 × 4 = 400.000
+    // taxes = 480.000 - 400.000 = 80.000
     const {getByText} = render(<ReservationScreen />);
-    expect(getByText('IVA (19%)')).toBeTruthy();
-    expect(getByText('COP $76.000')).toBeTruthy();
+    expect(getByText('Impuestos')).toBeTruthy();
+    expect(getByText('COP $80.000')).toBeTruthy();
   });
 
   it('renders total including taxes', () => {
-    // 400000 + 76000 = 476000
+    // total viene del backend: precioConImpuestos × nights = 480.000
     const {getAllByText} = render(<ReservationScreen />);
-    expect(getAllByText('COP $476.000').length).toBeGreaterThan(0);
+    expect(getAllByText('COP $480.000').length).toBeGreaterThan(0);
   });
 
   it('renders cancellation policy', () => {
@@ -164,13 +168,24 @@ describe('ReservationScreen', () => {
     fireEvent.press(getByTestId('reservation-consent-checkbox'));
     fireEvent.press(getByTestId('reservation-pay-button'));
     await waitFor(() => expect(mockBookRoom).toHaveBeenCalledTimes(1));
-    expect(mockBookRoom).toHaveBeenCalledWith({
-      habitacionId: 'room-1',
-      checkin: '2099-03-19',
-      checkout: '2099-03-23',
-      numHuespedes: 2,
-      token: 'tok_user',
-    });
+    expect(mockBookRoom).toHaveBeenCalledWith(
+      expect.objectContaining({
+        habitacionId: 'room-1',
+        checkin: '2099-03-19',
+        checkout: '2099-03-23',
+        numHuespedes: 2,
+        token: 'tok_user',
+        // Subtotal + impuestos (derivados del precio CON impuestos del
+        // backend) + total + moneda del room se envían al backend.
+        // 100.000 × 4 = 400.000 subtotal
+        // precioConImpuestos 120.000 × 4 = 480.000 total
+        // taxes = 480.000 − 400.000 = 80.000
+        subtotal: 400000,
+        impuestos: 80000,
+        total: 480000,
+        moneda: 'COP',
+      }),
+    );
     alertSpy.mockRestore();
   });
 
@@ -194,7 +209,7 @@ describe('ReservationScreen', () => {
           dateRange: '19 marzo 2099 - 23 marzo 2099',
           nights: 4,
           adults: 2,
-          total: 476000,
+          total: 480000,
           confirmationCode: 'booking-xyz',
         }),
       ),
@@ -331,14 +346,14 @@ describe('ReservationScreen', () => {
   it('updates dateRange, nights and total after confirming new dates in modal', () => {
     const {getByTestId, getByText, getAllByText} = render(<ReservationScreen />);
     fireEvent.press(getByTestId('reservation-edit-dates'));
-    // En el mes de marzo 2026: días 10 → 15 = 5 noches
+    // En el mes de marzo 2099: días 10 → 15 = 5 noches
     fireEvent.press(getByText('10'));
     fireEvent.press(getByText('15'));
     fireEvent.press(getByTestId('reservation-date-confirm'));
     expect(getByText(/10 marzo 2099 - 15 marzo 2099/)).toBeTruthy();
     expect(getByText(/5 noches/)).toBeTruthy();
-    // 5 noches × 100000 = 500000, IVA 95000, total 595000
-    expect(getAllByText('COP $595.000').length).toBeGreaterThan(0);
+    // 5 noches × precioConImpuestos 120000 = 600000 total
+    expect(getAllByText('COP $600.000').length).toBeGreaterThan(0);
   });
 
   it('disables date confirm button until both dates are selected', () => {

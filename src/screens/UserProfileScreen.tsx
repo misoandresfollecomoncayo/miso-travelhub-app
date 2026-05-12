@@ -9,8 +9,17 @@ import {
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
+import {useNavigation} from '@react-navigation/native';
+import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {Colors} from '../theme/colors';
 import {useAuth} from '../auth/AuthContext';
+import {useT} from '../i18n/useT';
+import {UserStackParamList} from '../navigation/UserStackNavigator';
+
+type ProfileNavigationProp = NativeStackNavigationProp<
+  UserStackParamList,
+  'UserProfile'
+>;
 
 const getInitials = (name: string): string => {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -59,33 +68,39 @@ const MenuItem: React.FC<MenuItemProps> = ({
 
 export const UserProfileScreen: React.FC = () => {
   const {user, logout} = useAuth();
+  const navigation = useNavigation<ProfileNavigationProp>();
+  const t = useT();
 
   if (!user) {
     return null;
   }
 
   const handleLogout = () => {
-    Alert.alert('Cerrar sesión', '¿Seguro que deseas cerrar la sesión?', [
-      {text: 'Cancelar', style: 'cancel'},
-      {
-        text: 'Cerrar sesión',
-        style: 'destructive',
-        onPress: () => {
-          logout();
+    Alert.alert(
+      t('profile.logoutConfirmTitle'),
+      t('profile.logoutConfirmMessage'),
+      [
+        {text: t('common.cancel'), style: 'cancel'},
+        {
+          text: t('profile.logoutConfirm'),
+          style: 'destructive',
+          onPress: () => {
+            logout();
+          },
         },
-      },
-    ]);
+      ],
+    );
   };
 
   const placeholder = (feature: string) => () =>
-    Alert.alert(feature, 'Funcionalidad próximamente');
+    Alert.alert(feature, t('common.comingSoon'));
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        <Text style={styles.headerTitle}>Mi perfil</Text>
+        <Text style={styles.headerTitle}>{t('profile.title')}</Text>
 
         <View style={styles.profileHeader} testID="profile-header">
           <View style={styles.avatar}>
@@ -110,36 +125,36 @@ export const UserProfileScreen: React.FC = () => {
           <MenuItem
             testID="profile-my-info"
             icon="person-outline"
-            label="Mi información"
-            onPress={placeholder('Mi información')}
+            label={t('profile.myInfo')}
+            onPress={placeholder(t('profile.myInfo'))}
           />
           <View style={styles.divider} />
           <MenuItem
             testID="profile-notifications"
             icon="notifications-outline"
-            label="Notificaciones"
-            onPress={placeholder('Notificaciones')}
+            label={t('profile.notifications')}
+            onPress={placeholder(t('profile.notifications'))}
           />
           <View style={styles.divider} />
           <MenuItem
             testID="profile-security"
             icon="shield-checkmark-outline"
-            label="Seguridad"
-            onPress={placeholder('Seguridad')}
+            label={t('profile.security')}
+            onPress={placeholder(t('profile.security'))}
           />
           <View style={styles.divider} />
           <MenuItem
             testID="profile-settings"
             icon="settings-outline"
-            label="Configuración"
-            onPress={placeholder('Configuración')}
+            label={t('profile.settings')}
+            onPress={() => navigation.navigate('Settings')}
           />
           <View style={styles.divider} />
           <MenuItem
             testID="profile-about"
             icon="information-circle-outline"
-            label="Acerca de TravelHub"
-            onPress={placeholder('Acerca de TravelHub')}
+            label={t('profile.about')}
+            onPress={placeholder(t('profile.about'))}
           />
         </View>
 
@@ -148,10 +163,10 @@ export const UserProfileScreen: React.FC = () => {
           style={styles.logoutButton}
           onPress={handleLogout}
           accessibilityRole="button"
-          accessibilityLabel="Cerrar sesión"
+          accessibilityLabel={t('profile.logout')}
           activeOpacity={0.85}>
           <Icon name="log-out-outline" size={20} color="#D32F2F" />
-          <Text style={styles.logoutText}>Cerrar sesión</Text>
+          <Text style={styles.logoutText}>{t('profile.logout')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

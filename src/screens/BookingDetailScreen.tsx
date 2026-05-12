@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  Linking,
   Alert,
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -15,7 +16,10 @@ import {RouteProp} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {Colors} from '../theme/colors';
 import {ReservationsStackParamList} from '../navigation/ReservationsStackNavigator';
-import {formatPrice} from '../utils/format';
+import {formatAmount} from '../utils/currency';
+import {usePreferences} from '../preferences/PreferencesContext';
+import {useT, useDates} from '../i18n/useT';
+import {TranslationKey} from '../i18n/translations';
 import {Room} from '../data/room';
 import {BookingListItem} from '../services/bookingApi';
 
@@ -28,37 +32,100 @@ type BookingDetailNavigationProp = NativeStackNavigationProp<
   'BookingDetail'
 >;
 
-const CANCEL_COLOR = '#D32F2F';
+interface StatusInfo {
+  labelKey: TranslationKey | null;
+  rawLabel: string;
+  bg: string;
+  fg: string;
+}
 
-const MONTH_NAMES_LOWER = [
-  'enero',
-  'febrero',
-  'marzo',
-  'abril',
-  'mayo',
-  'junio',
-  'julio',
-  'agosto',
-  'septiembre',
-  'octubre',
-  'noviembre',
-  'diciembre',
-];
-
-const formatLongDate = (iso: string): string => {
-  if (!iso) {
-    return '';
-  }
-  const dayPart = iso.slice(0, 10);
-  const [y, m, d] = dayPart.split('-').map(n => Number(n));
-  if (!y || !m || !d) {
-    return iso;
-  }
-  return `${d} ${MONTH_NAMES_LOWER[m - 1]} ${y}`;
+const STATUS_INFO: Record<
+  string,
+  Omit<StatusInfo, 'rawLabel'> & {labelKey: TranslationKey}
+> = {
+  PENDIENTE: {labelKey: 'reservations.status.pending', bg: '#E65100', fg: '#FFF'},
+  CONFIRMADA: {labelKey: 'reservations.status.confirmed', bg: '#1565C0', fg: '#FFF'},
+  CONFIRMADO: {labelKey: 'reservations.status.confirmed', bg: '#1565C0', fg: '#FFF'},
+  PAGADA: {labelKey: 'reservations.status.paid', bg: '#2E7D32', fg: '#FFF'},
+  COMPLETADA: {labelKey: 'reservations.status.completed', bg: '#E3F2FD', fg: '#1565C0'},
+  COMPLETADO: {labelKey: 'reservations.status.completed', bg: '#E3F2FD', fg: '#1565C0'},
+  CANCELADA: {labelKey: 'reservations.status.cancelled', bg: '#FFEBEE', fg: '#C62828'},
+  CANCELADO: {labelKey: 'reservations.status.cancelled', bg: '#FFEBEE', fg: '#C62828'},
 };
 
-const formatBookingDateRange = (checkin: string, checkout: string): string =>
-  `${formatLongDate(checkin)} - ${formatLongDate(checkout)}`;
+const getStatusInfo = (status: string): StatusInfo => {
+  const upper = (status || '').toUpperCase();
+  const known = STATUS_INFO[upper];
+  if (known) {
+    return {labelKey: known.labelKey, rawLabel: '', bg: known.bg, fg: known.fg};
+  }
+  return {
+    labelKey: null,
+    rawLabel: status || '',
+    bg: Colors.grayLight,
+    fg: Colors.textSecondary,
+  };
+};
+
+const isPendingStatus = (status: string): boolean =>
+  (status || '').toUpperCase() === 'PENDIENTE';
+
+const isConfirmedStatus = (status: string): boolean => {
+  const upper = (status || '').toUpperCase();
+  return upper === 'CONFIRMADA' || upper === 'CONFIRMADO';
+};
+
+// Exportado para que callers externos puedan ramificar lógica cuando una
+// reserva ya esté pagada (post-pasarela).
+export const isPaidStatus = (status: string): boolean => {
+  const upper = (status || '').toUpperCase();
+  return upper === 'PAGADA' || upper === 'PAGADO';
+};
+
+const PAYMENT_GATEWAY_BASE =
+  'https://miso-pasarela-pagos-evbwp.ondigitalocean.app/payment';
+const PAYMENT_RETURN_URL = 'AppTravelhub';
+
+export const buildPaymentUrl = (params: {
+  invoiceId: string;
+  currency: string;
+  /**
+   * Monto en la MISMA moneda que `currency`. El caller es responsable de
+   * convertir desde COP (almacenamiento interno) a la moneda objetivo antes
+   * de invocar esta función.
+   */
+  amount: number;
+  lang: string;
+}): string => {
+  // El gateway espera dos decimales para monedas con centavos (EUR/USD) y
+  // un entero para COP. Redondeamos a 2 decimales y dejamos que el backend
+  // interprete según el código de moneda.
+  const amountStr =
+    params.currency.toUpperCase() === 'COP'
+      ? String(Math.round(params.amount))
+      : params.amount.toFixed(2);
+  const query = new URLSearchParams({
+    invoiceId: params.invoiceId,
+    currency: params.currency.toUpperCase(),
+    amount: amountStr,
+    lang: params.lang.toUpperCase(),
+    returnUrl: PAYMENT_RETURN_URL,
+  });
+  return `${PAYMENT_GATEWAY_BASE}?${query.toString()}`;
+};
+
+const buildFormatLongDate = (monthFull: (m: number) => string) =>
+  (iso: string): string => {
+    if (!iso) {
+      return '';
+    }
+    const dayPart = iso.slice(0, 10);
+    const [y, m, d] = dayPart.split('-').map(n => Number(n));
+    if (!y || !m || !d) {
+      return iso;
+    }
+    return `${d} ${monthFull(m - 1)} ${y}`;
+  };
 
 const computeNights = (checkin: string, checkout: string): number => {
   const start = Date.parse(checkin);
@@ -78,6 +145,8 @@ const bookingToRoom = (booking: BookingListItem): Room => ({
   // No tenemos precio por noche en el booking; usamos 0 para que el footer
   // no aplique en el modo viewOnly (el footer se oculta de cualquier forma).
   precio: 0,
+  precioConImpuestos: 0,
+  moneda: booking.moneda,
   direccion: booking.direccion,
   capacidadMaxima: booking.numHuespedes,
   distancia: booking.distancia,
@@ -140,13 +209,18 @@ const Field: React.FC<FieldProps> = ({label, value, testID, onPress}) => {
 export const BookingDetailScreen: React.FC = () => {
   const route = useRoute<BookingDetailRouteProp>();
   const navigation = useNavigation<BookingDetailNavigationProp>();
+  // Sólo necesitamos `language` para el query string del gateway; la moneda
+  // y el total provienen de la propia reserva, no de las preferencias.
+  const {language} = usePreferences();
+  const t = useT();
+  const {monthFull} = useDates();
+  const formatLongDate = buildFormatLongDate(monthFull);
   const {booking} = route.params;
 
   const destination = [booking.ciudad, booking.pais].filter(Boolean).join(', ');
-  const dateRange = formatBookingDateRange(
-    booking.fechaCheckIn,
+  const dateRange = `${formatLongDate(booking.fechaCheckIn)} - ${formatLongDate(
     booking.fechaCheckOut,
-  );
+  )}`;
 
   const handleHospedajePress = () => {
     const room = bookingToRoom(booking);
@@ -164,24 +238,27 @@ export const BookingDetailScreen: React.FC = () => {
     });
   };
 
-  const handleCancelar = () => {
-    Alert.alert(
-      'Cancelar reserva',
-      '¿Estás seguro de que deseas cancelar esta reserva? Esta acción no se puede deshacer.',
-      [
-        {text: 'No', style: 'cancel'},
-        {
-          text: 'Sí, cancelar',
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert(
-              'Cancelación pendiente',
-              'La cancelación estará disponible próximamente.',
-            );
-          },
-        },
-      ],
-    );
+  const status = getStatusInfo(booking.estado);
+  const statusLabel = status.labelKey
+    ? t(status.labelKey)
+    : status.rawLabel || t('reservations.status.unknown');
+  const showQr = !isPendingStatus(booking.estado);
+  const showPayButton = isConfirmedStatus(booking.estado);
+
+  const handlePagar = async () => {
+    // La reserva ya viene con su propio total + moneda (la que se usó al
+    // crear la reserva). NO se convierte a la preferencia actual del usuario.
+    const url = buildPaymentUrl({
+      invoiceId: booking.id,
+      currency: booking.moneda,
+      amount: booking.total,
+      lang: language,
+    });
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert(t('common.error'), t('bookingDetail.payOpenError'));
+    }
   };
 
   return (
@@ -193,11 +270,11 @@ export const BookingDetailScreen: React.FC = () => {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
             accessibilityRole="button"
-            accessibilityLabel="Volver"
+            accessibilityLabel={t('common.back')}
             hitSlop={{top: 12, bottom: 12, left: 12, right: 12}}>
             <Icon name="arrow-back" size={24} color={Colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Consultar reserva</Text>
+          <Text style={styles.headerTitle}>{t('bookingDetail.headerTitle')}</Text>
           <View style={styles.headerSpacer} />
         </View>
       </SafeAreaView>
@@ -206,53 +283,74 @@ export const BookingDetailScreen: React.FC = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        <View style={styles.qrContainer} testID="booking-detail-qr">
-          <QRCode value={booking.id || 'unknown'} size={130} />
-        </View>
+        {showQr && (
+          <View style={styles.qrContainer} testID="booking-detail-qr">
+            <QRCode value={booking.id || 'unknown'} size={130} />
+          </View>
+        )}
         <Field
           testID="booking-detail-id"
-          label="Id reserva:"
+          label={t('bookingDetail.bookingId')}
           value={booking.id}
         />
+        <View style={styles.field} testID="booking-detail-status">
+          <View style={styles.fieldInner}>
+            <View style={styles.fieldTexts}>
+              <Text style={styles.fieldLabel}>
+                {t('bookingDetail.status')}
+              </Text>
+              <View
+                style={[styles.statusBadge, {backgroundColor: status.bg}]}>
+                <Text style={[styles.statusText, {color: status.fg}]}>
+                  {statusLabel}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
         <Field
           testID="booking-detail-destination"
-          label="Destino:"
+          label={t('bookingDetail.destination')}
           value={destination || '—'}
         />
         <Field
           testID="booking-detail-hospedaje"
-          label="Hospedaje:"
+          label={t('bookingDetail.lodging')}
           value={booking.nombreHotel}
           onPress={handleHospedajePress}
         />
         <Field
           testID="booking-detail-dates"
-          label="Fecha:"
+          label={t('bookingDetail.date')}
           value={dateRange}
         />
         <Field
           testID="booking-detail-guests"
-          label="Número de adultos:"
+          label={t('bookingDetail.adults')}
           value={String(booking.numHuespedes)}
         />
         <Field
           testID="booking-detail-total"
-          label="Total pagado:"
-          value={`COP $${formatPrice(booking.total)}`}
+          label={t('bookingDetail.totalPaid')}
+          value={formatAmount(booking.total, booking.moneda)}
         />
       </ScrollView>
 
-      <View style={styles.footer}>
-        <TouchableOpacity
-          testID="booking-detail-cancel-button"
-          style={styles.cancelButton}
-          onPress={handleCancelar}
-          accessibilityRole="button"
-          accessibilityLabel="Cancelar reserva"
-          activeOpacity={0.85}>
-          <Text style={styles.cancelButtonText}>CANCELAR RESERVA</Text>
-        </TouchableOpacity>
-      </View>
+      {showPayButton && (
+        <View style={styles.footer}>
+          <TouchableOpacity
+            testID="booking-detail-pay-button"
+            style={styles.payButton}
+            onPress={handlePagar}
+            accessibilityRole="button"
+            accessibilityLabel={t('bookingDetail.payButton')}
+            activeOpacity={0.85}>
+            <Text style={styles.payButtonText}>
+              {t('bookingDetail.payButton')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 };
@@ -329,22 +427,35 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     fontWeight: '600',
   },
+  statusBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+    marginTop: 2,
+  },
+  statusText: {
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
   footer: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: Colors.white,
+    borderTopWidth: 1,
+    borderTopColor: Colors.grayBorder,
   },
-  cancelButton: {
-    borderWidth: 1.5,
-    borderColor: CANCEL_COLOR,
+  payButton: {
+    backgroundColor: Colors.primary,
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 48,
   },
-  cancelButtonText: {
-    color: CANCEL_COLOR,
+  payButtonText: {
+    color: Colors.white,
     fontSize: 15,
     fontWeight: '700',
     letterSpacing: 1,

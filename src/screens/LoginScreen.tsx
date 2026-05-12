@@ -17,6 +17,7 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {Colors} from '../theme/colors';
 import {useAuth} from '../auth/AuthContext';
+import {useT} from '../i18n/useT';
 import {UserStackParamList} from '../navigation/UserStackNavigator';
 
 const TRAVELHUB_LOGO = require('../assets/logo_travelhub.png');
@@ -39,6 +40,7 @@ const isValidEmail = (value: string): boolean => {
 export const LoginScreen: React.FC = () => {
   const navigation = useNavigation<LoginNavigationProp>();
   const {login, loading} = useAuth();
+  const t = useT();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -57,8 +59,8 @@ export const LoginScreen: React.FC = () => {
       await login(email.trim(), password);
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : 'No se pudo iniciar sesión';
-      Alert.alert('Error', message);
+        err instanceof Error ? err.message : t('login.errorFallback');
+      Alert.alert(t('common.error'), message);
     }
   };
 
@@ -84,14 +86,14 @@ export const LoginScreen: React.FC = () => {
         </ImageBackground>
 
         <View style={styles.card}>
-            <Text style={styles.title}>Iniciar sesión</Text>
+            <Text style={styles.title}>{t('login.title')}</Text>
 
             <View
               style={[
                 styles.inputWrapper,
                 showEmailError && styles.inputWrapperError,
               ]}>
-              <Text style={styles.inputLabel}>Correo electrónico:</Text>
+              <Text style={styles.inputLabel}>{t('login.email')}</Text>
               <TextInput
                 testID="login-email"
                 style={styles.input}
@@ -106,12 +108,12 @@ export const LoginScreen: React.FC = () => {
             </View>
             {showEmailError && (
               <Text style={styles.errorText} testID="login-email-error">
-                Ingresa un correo electrónico válido.
+                {t('login.invalidEmail')}
               </Text>
             )}
 
             <View style={styles.inputWrapper}>
-              <Text style={styles.inputLabel}>Contraseña:</Text>
+              <Text style={styles.inputLabel}>{t('login.password')}</Text>
               <TextInput
                 testID="login-password"
                 style={styles.input}
@@ -130,7 +132,7 @@ export const LoginScreen: React.FC = () => {
               disabled={loading}
               accessibilityRole="link">
               <Text style={styles.forgotText}>
-                ¿No recuerdas tu contraseña?
+                {t('login.forgotPassword')}
               </Text>
             </TouchableOpacity>
 
@@ -143,13 +145,13 @@ export const LoginScreen: React.FC = () => {
               onPress={handleLogin}
               disabled={!formValid || loading}
               accessibilityRole="button"
-              accessibilityLabel="Iniciar sesión"
+              accessibilityLabel={t('login.title')}
               accessibilityState={{disabled: !formValid || loading}}
               activeOpacity={0.85}>
               {loading ? (
                 <ActivityIndicator color={Colors.white} testID="login-loading" />
               ) : (
-                <Text style={styles.primaryButtonText}>INICIAR SESIÓN</Text>
+                <Text style={styles.primaryButtonText}>{t('login.submitButton')}</Text>
               )}
             </TouchableOpacity>
 
@@ -159,9 +161,9 @@ export const LoginScreen: React.FC = () => {
             onPress={handleRegister}
             disabled={loading}
             accessibilityRole="button"
-            accessibilityLabel="Crear cuenta"
+            accessibilityLabel={t('login.registerButton')}
             activeOpacity={0.85}>
-            <Text style={styles.secondaryButtonText}>CREAR CUENTA</Text>
+            <Text style={styles.secondaryButtonText}>{t('login.registerButton')}</Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
