@@ -15,6 +15,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {Colors} from '../theme/colors';
+import {useT} from '../i18n/useT';
 import {UserStackParamList} from '../navigation/UserStackNavigator';
 
 type ForgotNavigationProp = NativeStackNavigationProp<
@@ -24,13 +25,11 @@ type ForgotNavigationProp = NativeStackNavigationProp<
 
 export const ForgotPasswordScreen: React.FC = () => {
   const navigation = useNavigation<ForgotNavigationProp>();
+  const t = useT();
   const [email, setEmail] = useState('');
 
   const handleRecover = () => {
-    Alert.alert(
-      'Recuperar contraseña',
-      'Si el correo existe, recibirás instrucciones para restablecer tu contraseña.',
-    );
+    Alert.alert(t('forgot.alertTitle'), t('forgot.alertMessage'));
   };
 
   return (
@@ -48,20 +47,17 @@ export const ForgotPasswordScreen: React.FC = () => {
               style={styles.backButton}
               onPress={() => navigation.goBack()}
               accessibilityRole="button"
-              accessibilityLabel="Volver"
+              accessibilityLabel={t('common.back')}
               hitSlop={{top: 12, bottom: 12, left: 12, right: 12}}>
               <Icon name="arrow-back" size={24} color={Colors.textPrimary} />
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.title}>Recuperar contraseña</Text>
-          <Text style={styles.subtitle}>
-            Ingresa tu correo y te enviaremos instrucciones para restablecer tu
-            contraseña.
-          </Text>
+          <Text style={styles.title}>{t('forgot.title')}</Text>
+          <Text style={styles.subtitle}>{t('forgot.subtitle')}</Text>
 
           <View style={styles.inputWrapper}>
-            <Text style={styles.inputLabel}>Correo electrónico:</Text>
+            <Text style={styles.inputLabel}>{t('forgot.email')}</Text>
             <TextInput
               testID="forgot-email"
               style={styles.input}
@@ -78,9 +74,9 @@ export const ForgotPasswordScreen: React.FC = () => {
             style={styles.primaryButton}
             onPress={handleRecover}
             accessibilityRole="button"
-            accessibilityLabel="Recuperar contraseña"
+            accessibilityLabel={t('forgot.title')}
             activeOpacity={0.85}>
-            <Text style={styles.primaryButtonText}>RECUPERAR CONTRASEÑA</Text>
+            <Text style={styles.primaryButtonText}>{t('forgot.submitButton')}</Text>
           </TouchableOpacity>
 
         </ScrollView>

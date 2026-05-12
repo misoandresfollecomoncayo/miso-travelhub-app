@@ -18,6 +18,7 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {Colors} from '../theme/colors';
 import {UserStackParamList} from '../navigation/UserStackNavigator';
 import {useAuth} from '../auth/AuthContext';
+import {useT} from '../i18n/useT';
 import {SelectField, SelectOption} from '../components/SelectField';
 import {
   getPasswordChecks,
@@ -32,30 +33,35 @@ type RegisterNavigationProp = NativeStackNavigationProp<
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const COUNTRY_OPTIONS: SelectOption[] = [
-  {value: 'CO', label: 'Colombia'},
-  {value: 'AR', label: 'Argentina'},
-  {value: 'BR', label: 'Brasil'},
-  {value: 'CL', label: 'Chile'},
-  {value: 'EC', label: 'Ecuador'},
-  {value: 'ES', label: 'España'},
-  {value: 'MX', label: 'México'},
-  {value: 'PE', label: 'Perú'},
-  {value: 'US', label: 'Estados Unidos'},
-  {value: 'UY', label: 'Uruguay'},
-  {value: 'VE', label: 'Venezuela'},
-];
+const COUNTRY_VALUES = [
+  'CO',
+  'AR',
+  'BR',
+  'CL',
+  'EC',
+  'ES',
+  'MX',
+  'PE',
+  'US',
+  'UY',
+  'VE',
+] as const;
 
-const LANGUAGE_OPTIONS: SelectOption[] = [
-  {value: 'es', label: 'Español'},
-  {value: 'en', label: 'Inglés'},
-];
+type CountryValue = (typeof COUNTRY_VALUES)[number];
 
-const CURRENCY_OPTIONS: SelectOption[] = [
-  {value: 'COP', label: 'COP — Peso colombiano'},
-  {value: 'EUR', label: 'EUR — Euro'},
-  {value: 'USD', label: 'USD — Dólar estadounidense'},
-];
+const COUNTRY_KEYS: Record<CountryValue, string> = {
+  CO: 'register.country.co',
+  AR: 'register.country.ar',
+  BR: 'register.country.br',
+  CL: 'register.country.cl',
+  EC: 'register.country.ec',
+  ES: 'register.country.es',
+  MX: 'register.country.mx',
+  PE: 'register.country.pe',
+  US: 'register.country.us',
+  UY: 'register.country.uy',
+  VE: 'register.country.ve',
+};
 
 const CHECK_OK_COLOR = '#2E7D32';
 const CHECK_KO_COLOR = '#9E9E9E';
@@ -80,6 +86,23 @@ const PasswordCheck: React.FC<PasswordCheckProps> = ({ok, label, testID}) => (
 export const RegisterScreen: React.FC = () => {
   const navigation = useNavigation<RegisterNavigationProp>();
   const {register, loading} = useAuth();
+  const t = useT();
+
+  const COUNTRY_OPTIONS: SelectOption[] = COUNTRY_VALUES.map(v => ({
+    value: v,
+    label: t(COUNTRY_KEYS[v] as Parameters<typeof t>[0]),
+  }));
+
+  const LANGUAGE_OPTIONS: SelectOption[] = [
+    {value: 'es', label: t('register.languageOption.es')},
+    {value: 'en', label: t('register.languageOption.en')},
+  ];
+
+  const CURRENCY_OPTIONS: SelectOption[] = [
+    {value: 'COP', label: t('register.currencyOption.cop')},
+    {value: 'EUR', label: t('register.currencyOption.eur')},
+    {value: 'USD', label: t('register.currencyOption.usd')},
+  ];
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -125,8 +148,8 @@ export const RegisterScreen: React.FC = () => {
       // cambiará automáticamente a la pantalla de perfil.
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : 'No se pudo crear la cuenta';
-      Alert.alert('Error', message);
+        err instanceof Error ? err.message : t('register.errorFallback');
+      Alert.alert(t('common.error'), message);
     }
   };
 
@@ -146,19 +169,17 @@ export const RegisterScreen: React.FC = () => {
               onPress={() => navigation.goBack()}
               disabled={loading}
               accessibilityRole="button"
-              accessibilityLabel="Volver"
+              accessibilityLabel={t('common.back')}
               hitSlop={{top: 12, bottom: 12, left: 12, right: 12}}>
               <Icon name="arrow-back" size={24} color={Colors.textPrimary} />
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.title}>Crear cuenta</Text>
-          <Text style={styles.subtitle}>
-            Regístrate para comenzar a planear tus viajes.
-          </Text>
+          <Text style={styles.title}>{t('register.title')}</Text>
+          <Text style={styles.subtitle}>{t('register.subtitle')}</Text>
 
           <View style={styles.inputWrapper}>
-            <Text style={styles.inputLabel}>Nombre completo:</Text>
+            <Text style={styles.inputLabel}>{t('register.fullName')}</Text>
             <TextInput
               testID="register-name"
               style={styles.input}
@@ -170,7 +191,7 @@ export const RegisterScreen: React.FC = () => {
           </View>
 
           <View style={styles.inputWrapper}>
-            <Text style={styles.inputLabel}>Correo electrónico:</Text>
+            <Text style={styles.inputLabel}>{t('register.email')}</Text>
             <TextInput
               testID="register-email"
               style={styles.input}
@@ -184,7 +205,7 @@ export const RegisterScreen: React.FC = () => {
           </View>
 
           <View style={styles.inputWrapper}>
-            <Text style={styles.inputLabel}>Teléfono (opcional):</Text>
+            <Text style={styles.inputLabel}>{t('register.phone')}</Text>
             <TextInput
               testID="register-phone"
               style={styles.input}
@@ -197,7 +218,7 @@ export const RegisterScreen: React.FC = () => {
 
           <SelectField
             testID="register-country"
-            label="País:"
+            label={t('register.country')}
             value={country}
             options={COUNTRY_OPTIONS}
             onChange={setCountry}
@@ -206,7 +227,7 @@ export const RegisterScreen: React.FC = () => {
 
           <SelectField
             testID="register-language"
-            label="Idioma:"
+            label={t('register.language')}
             value={language}
             options={LANGUAGE_OPTIONS}
             onChange={setLanguage}
@@ -215,7 +236,7 @@ export const RegisterScreen: React.FC = () => {
 
           <SelectField
             testID="register-currency"
-            label="Moneda preferida:"
+            label={t('register.currency')}
             value={currency}
             options={CURRENCY_OPTIONS}
             onChange={setCurrency}
@@ -223,7 +244,7 @@ export const RegisterScreen: React.FC = () => {
           />
 
           <View style={styles.inputWrapper}>
-            <Text style={styles.inputLabel}>Contraseña:</Text>
+            <Text style={styles.inputLabel}>{t('register.password')}</Text>
             <TextInput
               testID="register-password"
               style={styles.input}
@@ -241,28 +262,28 @@ export const RegisterScreen: React.FC = () => {
               <PasswordCheck
                 testID="password-check-length"
                 ok={passwordChecks.length}
-                label={`Al menos ${MIN_PASSWORD_LENGTH} caracteres`}
+                label={t('register.passwordCheckLength', {n: MIN_PASSWORD_LENGTH})}
               />
               <PasswordCheck
                 testID="password-check-letter"
                 ok={passwordChecks.letter}
-                label="Al menos 1 letra"
+                label={t('register.passwordCheckLetter')}
               />
               <PasswordCheck
                 testID="password-check-digit"
                 ok={passwordChecks.digit}
-                label="Al menos 1 número"
+                label={t('register.passwordCheckDigit')}
               />
               <PasswordCheck
                 testID="password-check-special"
                 ok={passwordChecks.special}
-                label="Al menos 1 carácter especial"
+                label={t('register.passwordCheckSpecial')}
               />
             </View>
           )}
 
           <View style={styles.inputWrapper}>
-            <Text style={styles.inputLabel}>Confirmar contraseña:</Text>
+            <Text style={styles.inputLabel}>{t('register.confirmPassword')}</Text>
             <TextInput
               testID="register-confirm"
               style={styles.input}
@@ -275,7 +296,7 @@ export const RegisterScreen: React.FC = () => {
           </View>
           {confirm.length > 0 && !confirmValid && (
             <Text style={styles.errorText} testID="register-confirm-error">
-              Las contraseñas no coinciden.
+              {t('register.passwordsDontMatch')}
             </Text>
           )}
 
@@ -287,7 +308,7 @@ export const RegisterScreen: React.FC = () => {
               disabled={loading}
               accessibilityRole="checkbox"
               accessibilityState={{checked: termsAccepted}}
-              accessibilityLabel="Acepto los términos y condiciones de uso"
+              accessibilityLabel={t('register.acceptTermsLink')}
               hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
               <View
                 style={[
@@ -300,15 +321,15 @@ export const RegisterScreen: React.FC = () => {
               </View>
             </TouchableOpacity>
             <Text style={styles.termsText}>
-              Acepto los{' '}
+              {t('register.acceptTermsPrefix')}
               <Text
                 testID="register-terms-link"
                 style={styles.termsLink}
                 onPress={() => navigation.navigate('TermsAndConditions')}
                 accessibilityRole="link">
-                términos y condiciones de uso
-              </Text>{' '}
-              de la aplicación.
+                {t('register.acceptTermsLink')}
+              </Text>
+              {t('register.acceptTermsSuffix')}
             </Text>
           </View>
 
@@ -321,7 +342,7 @@ export const RegisterScreen: React.FC = () => {
             onPress={handleRegister}
             disabled={!formValid || loading}
             accessibilityRole="button"
-            accessibilityLabel="Crear cuenta"
+            accessibilityLabel={t('register.title')}
             accessibilityState={{disabled: !formValid || loading}}
             activeOpacity={0.85}>
             {loading ? (
@@ -330,7 +351,7 @@ export const RegisterScreen: React.FC = () => {
                 testID="register-loading"
               />
             ) : (
-              <Text style={styles.primaryButtonText}>CREAR CUENTA</Text>
+              <Text style={styles.primaryButtonText}>{t('register.submitButton')}</Text>
             )}
           </TouchableOpacity>
         </ScrollView>

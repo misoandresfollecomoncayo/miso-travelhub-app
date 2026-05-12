@@ -5,10 +5,12 @@ import {SearchStackNavigator} from './SearchStackNavigator';
 import {UserStackNavigator} from './UserStackNavigator';
 import {ReservationsStackNavigator} from './ReservationsStackNavigator';
 import {Colors} from '../theme/colors';
+import {useT} from '../i18n/useT';
 
 const Tab = createBottomTabNavigator();
 
 export const AppNavigator: React.FC = () => {
+  const t = useT();
   return (
     <Tab.Navigator
       screenOptions={{
@@ -28,6 +30,8 @@ export const AppNavigator: React.FC = () => {
         name="Buscar"
         component={SearchStackNavigator}
         options={{
+          tabBarLabel: t('tab.search'),
+          tabBarButtonTestID: 'tab-search',
           tabBarIcon: ({color, size}) => (
             <Icon name="search-outline" color={color} size={size} />
           ),
@@ -37,6 +41,8 @@ export const AppNavigator: React.FC = () => {
         name="Reservas"
         component={ReservationsStackNavigator}
         options={{
+          tabBarLabel: t('tab.reservations'),
+          tabBarButtonTestID: 'tab-reservations',
           tabBarIcon: ({color, size}) => (
             <Icon name="calendar-outline" color={color} size={size} />
           ),
@@ -46,6 +52,8 @@ export const AppNavigator: React.FC = () => {
         name="Usuario"
         component={UserStackNavigator}
         options={{
+          tabBarLabel: t('tab.user'),
+          tabBarButtonTestID: 'tab-user',
           tabBarIcon: ({color, size}) => (
             <Icon name="person-outline" color={color} size={size} />
           ),

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {Colors} from '../theme/colors';
+import {useT} from '../i18n/useT';
 
 export interface SelectOption {
   value: string;
@@ -30,12 +31,14 @@ export const SelectField: React.FC<SelectFieldProps> = ({
   value,
   options,
   onChange,
-  placeholder = 'Selecciona...',
+  placeholder,
   disabled = false,
   testID,
 }) => {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const selected = options.find(opt => opt.value === value);
+  const placeholderText = placeholder ?? t('select.placeholder');
 
   const handleSelect = (optionValue: string) => {
     onChange(optionValue);
@@ -59,7 +62,7 @@ export const SelectField: React.FC<SelectFieldProps> = ({
               styles.valueText,
               !selected && styles.valuePlaceholder,
             ]}>
-            {selected ? selected.label : placeholder}
+            {selected ? selected.label : placeholderText}
           </Text>
           <Icon
             name="chevron-down"

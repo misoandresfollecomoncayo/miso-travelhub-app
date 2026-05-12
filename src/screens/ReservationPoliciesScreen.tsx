@@ -5,6 +5,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {Colors} from '../theme/colors';
+import {useT} from '../i18n/useT';
 import {SearchStackParamList} from '../navigation/SearchStackNavigator';
 
 type PoliciesNavigationProp = NativeStackNavigationProp<
@@ -26,6 +27,7 @@ Quisque volutpat condimentum velit. Class aptent taciti sociosqu ad litora torqu
 
 export const ReservationPoliciesScreen: React.FC = () => {
   const navigation = useNavigation<PoliciesNavigationProp>();
+  const t = useT();
 
   return (
     <View style={styles.container}>
@@ -36,11 +38,11 @@ export const ReservationPoliciesScreen: React.FC = () => {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
             accessibilityRole="button"
-            accessibilityLabel="Volver"
+            accessibilityLabel={t('common.back')}
             hitSlop={{top: 12, bottom: 12, left: 12, right: 12}}>
             <Icon name="arrow-back" size={24} color={Colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Políticas de reservación</Text>
+          <Text style={styles.headerTitle}>{t('policies.headerTitle')}</Text>
           <View style={styles.headerSpacer} />
         </View>
       </SafeAreaView>
@@ -49,7 +51,7 @@ export const ReservationPoliciesScreen: React.FC = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Términos y condiciones de reserva</Text>
+        <Text style={styles.title}>{t('policies.bodyTitle')}</Text>
         <Text style={styles.body} testID="policies-body">
           {POLICIES_TEXT}
         </Text>

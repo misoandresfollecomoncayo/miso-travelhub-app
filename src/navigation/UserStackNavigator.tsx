@@ -6,6 +6,7 @@ import {RegisterScreen} from '../screens/RegisterScreen';
 import {ForgotPasswordScreen} from '../screens/ForgotPasswordScreen';
 import {UserProfileScreen} from '../screens/UserProfileScreen';
 import {TermsAndConditionsScreen} from '../screens/TermsAndConditionsScreen';
+import {SettingsScreen} from '../screens/SettingsScreen';
 import {Colors} from '../theme/colors';
 import {useAuth} from '../auth/AuthContext';
 
@@ -15,6 +16,7 @@ export type UserStackParamList = {
   ForgotPassword: undefined;
   UserProfile: undefined;
   TermsAndConditions: undefined;
+  Settings: undefined;
 };
 
 const Stack = createNativeStackNavigator<UserStackParamList>();
@@ -35,7 +37,10 @@ export const UserStackNavigator: React.FC = () => {
   return (
     <Stack.Navigator screenOptions={{headerShown: false}}>
       {user ? (
-        <Stack.Screen name="UserProfile" component={UserProfileScreen} />
+        <>
+          <Stack.Screen name="UserProfile" component={UserProfileScreen} />
+          <Stack.Screen name="Settings" component={SettingsScreen} />
+        </>
       ) : (
         <>
           <Stack.Screen name="Login" component={LoginScreen} />

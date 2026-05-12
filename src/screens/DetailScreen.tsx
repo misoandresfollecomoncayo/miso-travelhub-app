@@ -19,7 +19,8 @@ import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {Colors} from '../theme/colors';
 import {SearchStackParamList} from '../navigation/SearchStackNavigator';
 import {StarRating} from '../components/StarRating';
-import {formatPrice} from '../utils/format';
+import {formatAmount} from '../utils/currency';
+import {useT} from '../i18n/useT';
 import {resolveImageList} from '../utils/images';
 import {getAmenityIcon} from '../utils/amenityIcons';
 
@@ -37,6 +38,7 @@ const capitalize = (value: string): string =>
 export const DetailScreen: React.FC = () => {
   const route = useRoute<DetailRouteProp>();
   const navigation = useNavigation<DetailNavigationProp>();
+  const t = useT();
   const {
     room,
     nights,
@@ -55,7 +57,11 @@ export const DetailScreen: React.FC = () => {
   const images = resolveImageList(room.imagenes);
   const totalImages = images.length;
   const totalPrice = room.precio * nights;
-  const nightsLabel = nights === 1 ? 'noche' : 'noches';
+  const hasDiscount =
+    room.precioOriginal !== undefined && room.precioOriginal > room.precio;
+  const totalOriginalPrice = hasDiscount
+    ? (room.precioOriginal as number) * nights
+    : 0;
 
   const galleryTranslateY = scrollY.interpolate({
     inputRange: [-1, 0, GALLERY_HEIGHT],
@@ -139,18 +145,18 @@ export const DetailScreen: React.FC = () => {
           <View style={styles.ratingRow}>
             <View style={styles.ratingColumn}>
               <StarRating rating={room.estrellas} size={20} />
-              <Text style={styles.ratingLabel}>{room.estrellas} estrellas</Text>
+              <Text style={styles.ratingLabel}>{room.estrellas} {t('detail.starsLabel')}</Text>
             </View>
             <View style={styles.ratingDivider} />
             <View style={styles.ratingColumn}>
               <Text style={styles.reviewsCount}>{room.cantidadResenas}</Text>
-              <Text style={styles.ratingLabel}>Reseñas</Text>
+              <Text style={styles.ratingLabel}>{t('detail.reviewsLabel')}</Text>
             </View>
           </View>
 
           <View style={styles.divider} />
 
-          <Text style={styles.sectionTitle}>Información del hospedaje</Text>
+          <Text style={styles.sectionTitle}>{t('detail.infoSection')}</Text>
           <View style={styles.infoContainer} testID="detail-info">
             {room.direccion.length > 0 && (
               <View style={styles.infoRow} testID="detail-info-direccion">
@@ -160,7 +166,7 @@ export const DetailScreen: React.FC = () => {
                   color={Colors.textSecondary}
                 />
                 <View style={styles.infoTextWrapper}>
-                  <Text style={styles.infoLabel}>Dirección</Text>
+                  <Text style={styles.infoLabel}>{t('detail.address')}</Text>
                   <Text style={styles.infoValue}>{room.direccion}</Text>
                 </View>
               </View>
@@ -174,7 +180,7 @@ export const DetailScreen: React.FC = () => {
                   color={Colors.textSecondary}
                 />
                 <View style={styles.infoTextWrapper}>
-                  <Text style={styles.infoLabel}>Distancia</Text>
+                  <Text style={styles.infoLabel}>{t('detail.distance')}</Text>
                   <Text style={styles.infoValue}>{room.distancia}</Text>
                 </View>
               </View>
@@ -188,7 +194,7 @@ export const DetailScreen: React.FC = () => {
                   color={Colors.textSecondary}
                 />
                 <View style={styles.infoTextWrapper}>
-                  <Text style={styles.infoLabel}>Acceso</Text>
+                  <Text style={styles.infoLabel}>{t('detail.access')}</Text>
                   <Text style={styles.infoValue}>{room.acceso}</Text>
                 </View>
               </View>
@@ -202,7 +208,7 @@ export const DetailScreen: React.FC = () => {
                   color={Colors.textSecondary}
                 />
                 <View style={styles.infoTextWrapper}>
-                  <Text style={styles.infoLabel}>Tipo de habitación</Text>
+                  <Text style={styles.infoLabel}>{t('detail.roomType')}</Text>
                   <Text style={styles.infoValue}>
                     {capitalize(room.tipoHabitacion)}
                   </Text>
@@ -218,7 +224,7 @@ export const DetailScreen: React.FC = () => {
                   color={Colors.textSecondary}
                 />
                 <View style={styles.infoTextWrapper}>
-                  <Text style={styles.infoLabel}>Tamaño</Text>
+                  <Text style={styles.infoLabel}>{t('detail.size')}</Text>
                   <Text style={styles.infoValue}>{room.tamanoHabitacion}</Text>
                 </View>
               </View>
@@ -234,8 +240,8 @@ export const DetailScreen: React.FC = () => {
                 <View style={styles.infoTextWrapper}>
                   <Text style={styles.infoLabel}>
                     {room.tipoCama.length === 1
-                      ? 'Tipo de cama'
-                      : 'Tipos de cama'}
+                      ? t('detail.bedTypeSingle')
+                      : t('detail.bedTypePlural')}
                   </Text>
                   <Text style={styles.infoValue}>
                     {room.tipoCama.map(capitalize).join(', ')}
@@ -252,10 +258,15 @@ export const DetailScreen: React.FC = () => {
                   color={Colors.textSecondary}
                 />
                 <View style={styles.infoTextWrapper}>
-                  <Text style={styles.infoLabel}>Capacidad</Text>
+                  <Text style={styles.infoLabel}>{t('detail.capacity')}</Text>
                   <Text style={styles.infoValue}>
-                    Hasta {room.capacidadMaxima}{' '}
-                    {room.capacidadMaxima === 1 ? 'persona' : 'personas'}
+                    {room.capacidadMaxima === 1
+                      ? t('detail.capacityValueSingular', {
+                          n: room.capacidadMaxima,
+                        })
+                      : t('detail.capacityValuePlural', {
+                          n: room.capacidadMaxima,
+                        })}
                   </Text>
                 </View>
               </View>
@@ -265,7 +276,7 @@ export const DetailScreen: React.FC = () => {
               <View style={styles.infoRow} testID="detail-info-puntuacion">
                 <Icon name="star-outline" size={22} color={Colors.star} />
                 <View style={styles.infoTextWrapper}>
-                  <Text style={styles.infoLabel}>Puntuación</Text>
+                  <Text style={styles.infoLabel}>{t('detail.score')}</Text>
                   <Text style={styles.infoValue}>
                     {room.puntuacionResena.toFixed(1)} / 5
                   </Text>
@@ -277,7 +288,7 @@ export const DetailScreen: React.FC = () => {
           {room.amenidades.length > 0 && (
             <>
               <View style={styles.divider} />
-              <Text style={styles.sectionTitle}>Amenidades</Text>
+              <Text style={styles.sectionTitle}>{t('detail.amenitiesSection')}</Text>
               <View style={styles.amenitiesContainer} testID="detail-amenities">
                 {room.amenidades.map((amenidad, index) => (
                   <View
@@ -306,7 +317,7 @@ export const DetailScreen: React.FC = () => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
           accessibilityRole="button"
-          accessibilityLabel="Volver"
+          accessibilityLabel={t('common.back')}
           hitSlop={{top: 12, bottom: 12, left: 12, right: 12}}>
           <Icon name="arrow-back" size={24} color={Colors.white} />
         </TouchableOpacity>
@@ -316,13 +327,21 @@ export const DetailScreen: React.FC = () => {
         <View style={styles.footerSafeArea} testID="detail-footer">
           <View style={styles.footer}>
             <View style={styles.priceContainer}>
+              {hasDiscount && (
+                <Text
+                  style={styles.totalPriceOriginal}
+                  testID="detail-original-price">
+                  {formatAmount(totalOriginalPrice, room.moneda)}
+                </Text>
+              )}
               <Text style={styles.totalPrice}>
-                COP ${formatPrice(totalPrice)}
+                {formatAmount(totalPrice, room.moneda)}
               </Text>
               <Text style={styles.nightsLabel}>
-                Por{' '}
                 <Text style={styles.nightsLink}>
-                  {nights} {nightsLabel}
+                  {nights === 1
+                    ? t('detail.forNightsSingular', {n: nights})
+                    : t('detail.forNightsPlural', {n: nights})}
                 </Text>
               </Text>
             </View>
@@ -331,9 +350,9 @@ export const DetailScreen: React.FC = () => {
               style={styles.reserveButton}
               onPress={handleReservar}
               accessibilityRole="button"
-              accessibilityLabel="Reservar hospedaje"
+              accessibilityLabel={t('detail.reserveButtonAccessibility')}
               activeOpacity={0.85}>
-              <Text style={styles.reserveButtonText}>RESERVAR</Text>
+              <Text style={styles.reserveButtonText}>{t('detail.reserveButton')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -511,6 +530,13 @@ const styles = StyleSheet.create({
   },
   priceContainer: {
     flex: 1,
+  },
+  totalPriceOriginal: {
+    fontSize: 13,
+    fontWeight: '400',
+    color: Colors.textSecondary,
+    textDecorationLine: 'line-through',
+    marginBottom: 1,
   },
   totalPrice: {
     fontSize: 16,

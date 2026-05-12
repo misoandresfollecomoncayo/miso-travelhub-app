@@ -1,6 +1,5 @@
-import {convertToCop} from '../utils/currency';
+import {API_BASE_URL} from '../config/api';
 
-const API_BASE_URL = 'https://apitravelhub.site';
 const BOOKING_ENDPOINT = `${API_BASE_URL}/api/v1/booking/booking_room`;
 const GET_BOOKINGS_ENDPOINT = `${API_BASE_URL}/api/v1/booking/get_bookings`;
 
@@ -9,6 +8,14 @@ export interface BookRoomParams {
   checkin: string;
   checkout: string;
   numHuespedes: number;
+  /** Subtotal (precio sin impuestos) en la moneda `moneda`. */
+  subtotal: number;
+  /** Monto de impuestos en la moneda `moneda`. */
+  impuestos: number;
+  /** Total con impuestos (subtotal + impuestos) en la moneda `moneda`. */
+  total: number;
+  /** Código de moneda con la que se está comprando (ej. 'COP', 'EUR'). */
+  moneda: string;
   token: string;
 }
 
@@ -40,7 +47,17 @@ export interface BookingListItem {
   tipoCama: string[];
   distancia: string;
   acceso: string;
-  total: number; // ya convertido a COP
+  /**
+   * Monto total de la reserva, EN LA MISMA MONEDA en que se hizo la compra
+   * (campo `moneda`). NO se convierte a la moneda del usuario — las reservas
+   * son inmutables y se muestran en la moneda original.
+   */
+  total: number;
+  /**
+   * Código de moneda con la que se hizo la reserva. Ej: 'COP', 'EUR', 'USD'.
+   * Default 'COP' si el backend no la devuelve.
+   */
+  moneda: string;
 }
 
 const parseErrorMessage = (payload: unknown): string => {
@@ -86,9 +103,14 @@ const toNumber = (value: unknown, fallback = 0): number => {
   return fallback;
 };
 
+type BookingFallback = Pick<
+  BookRoomParams,
+  'habitacionId' | 'checkin' | 'checkout' | 'numHuespedes'
+>;
+
 const normalizeBooking = (
   payload: unknown,
-  fallback: Omit<BookRoomParams, 'token'>,
+  fallback: BookingFallback,
 ): Booking => {
   const obj = (payload ?? {}) as Record<string, unknown>;
   return {
@@ -110,7 +132,17 @@ const normalizeBooking = (
 };
 
 export const bookRoom = async (params: BookRoomParams): Promise<Booking> => {
-  const {habitacionId, checkin, checkout, numHuespedes, token} = params;
+  const {
+    habitacionId,
+    checkin,
+    checkout,
+    numHuespedes,
+    subtotal,
+    impuestos,
+    total,
+    moneda,
+    token,
+  } = params;
 
   if (!token) {
     throw new Error('Debes iniciar sesión para crear una reserva');
@@ -118,6 +150,18 @@ export const bookRoom = async (params: BookRoomParams): Promise<Booking> => {
   if (!habitacionId || !checkin || !checkout) {
     throw new Error('Faltan datos de la reserva');
   }
+
+  // Los montos se redondean a entero para COP (sin centavos) y a 2 decimales
+  // para EUR/USD. Deben coincidir con lo mostrado al usuario antes de
+  // confirmar la reserva.
+  const normalizedMoneda = (moneda || 'COP').toUpperCase();
+  const normalize = (value: number): number =>
+    normalizedMoneda === 'COP'
+      ? Math.round(value)
+      : Number(value.toFixed(2));
+  const normalizedSubtotal = normalize(subtotal);
+  const normalizedImpuestos = normalize(impuestos);
+  const normalizedTotal = normalize(total);
 
   let response: Response;
   try {
@@ -133,6 +177,10 @@ export const bookRoom = async (params: BookRoomParams): Promise<Booking> => {
         checkin,
         checkout,
         numHuespedes,
+        subtotal: normalizedSubtotal,
+        impuestos: normalizedImpuestos,
+        total: normalizedTotal,
+        moneda: normalizedMoneda,
       }),
     });
   } catch {
@@ -170,15 +218,55 @@ const toStringArray = (value: unknown): string[] => {
     .filter(item => item.length > 0);
 };
 
+const SUPPORTED_MONEDAS = new Set(['COP', 'EUR', 'USD']);
+
+/**
+ * Extrae el código de moneda de un payload defensivamente.
+ *
+ * El backend puede devolver la moneda bajo nombres distintos
+ * (`moneda` / `currency` / `moneda_pago`), o no devolverla. Aceptamos sólo
+ * códigos ISO conocidos; cualquier valor inválido cae al fallback.
+ *
+ * Heurística adicional: si no hay moneda explícita y el `total` es muy
+ * pequeño para ser COP (menos de 1.000 — un hospedaje en COP suele estar en
+ * cientos de miles), asumimos EUR/USD por defecto en vez de COP. Esto evita
+ * mostrar `"COP $216"` cuando la reserva fue claramente en euros (€216).
+ */
+const extractMoneda = (
+  obj: Record<string, unknown>,
+  total: number,
+  fallback = 'COP',
+): string => {
+  const candidates = [
+    obj.moneda,
+    obj.currency,
+    obj.moneda_pago,
+    obj.codigoMoneda,
+  ];
+  for (const raw of candidates) {
+    const value = toString(raw).trim().toUpperCase();
+    if (value && SUPPORTED_MONEDAS.has(value)) {
+      return value;
+    }
+  }
+  // Heurística: total muy bajo → no es COP. Asumimos EUR porque la mayoría
+  // de hospedajes del backend originan en euros y nuestro fallback histórico
+  // era EUR antes de cambiar el modelo a moneda nativa.
+  if (total > 0 && total < 1000) {
+    return 'EUR';
+  }
+  return fallback;
+};
+
 const normalizeBookingListItem = (
   payload: unknown,
   index: number,
 ): BookingListItem => {
   const obj = (payload ?? {}) as Record<string, unknown>;
+  // La reserva se muestra siempre en la moneda con la que se hizo la compra,
+  // sin convertir a la preferencia actual del usuario.
   const totalRaw = toNumber(obj.total);
-  // Los precios del backend vienen en EUR; convertimos a COP para la UI.
-  // Si el item incluye explícitamente moneda, se respeta.
-  const moneda = toString(obj.moneda, 'EUR');
+  const moneda = extractMoneda(obj, totalRaw);
   return {
     id: toString(obj.id, `booking-${index}`),
     nombreHotel: toString(obj.nombreHotel, 'Hospedaje'),
@@ -198,7 +286,8 @@ const normalizeBookingListItem = (
     tipoCama: toStringArray(obj.tipo_cama ?? obj.tipoCama),
     distancia: toString(obj.distancia),
     acceso: toString(obj.acceso),
-    total: convertToCop(totalRaw, moneda),
+    total: totalRaw,
+    moneda,
   };
 };
 
