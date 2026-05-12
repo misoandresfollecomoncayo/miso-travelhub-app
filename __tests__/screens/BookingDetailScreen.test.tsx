@@ -104,7 +104,8 @@ describe('BookingDetailScreen', () => {
     expect(getByText('COP $493.824')).toBeTruthy();
   });
 
-  it('renders the QR code with the booking id as value', () => {
+  it('renders the QR code with the booking id as value when status is PAGADA', () => {
+    mockRouteBooking = {...sampleBooking, estado: 'PAGADA'};
     const {getByTestId, UNSAFE_getByType} = render(<BookingDetailScreen />);
     expect(getByTestId('booking-detail-qr')).toBeTruthy();
     // The mocked QRCode is the string component 'QRCode' — find it by type.
@@ -165,20 +166,14 @@ describe('BookingDetailScreen', () => {
     expect(getByText('Pendiente')).toBeTruthy();
   });
 
-  it('shows QR when status is CONFIRMADA', () => {
-    mockRouteBooking = {...sampleBooking, estado: 'CONFIRMADA'};
+  it('shows QR when status is PAGADA', () => {
+    mockRouteBooking = {...sampleBooking, estado: 'PAGADA'};
     const {queryByTestId} = render(<BookingDetailScreen />);
     expect(queryByTestId('booking-detail-qr')).toBeTruthy();
   });
 
-  it('shows QR when status is COMPLETADA', () => {
-    mockRouteBooking = {...sampleBooking, estado: 'COMPLETADA'};
-    const {queryByTestId} = render(<BookingDetailScreen />);
-    expect(queryByTestId('booking-detail-qr')).toBeTruthy();
-  });
-
-  it('shows QR when status is CANCELADA (still not pending)', () => {
-    mockRouteBooking = {...sampleBooking, estado: 'CANCELADA'};
+  it('shows QR when status is pagada in lower-case (case-insensitive)', () => {
+    mockRouteBooking = {...sampleBooking, estado: 'pagada'};
     const {queryByTestId} = render(<BookingDetailScreen />);
     expect(queryByTestId('booking-detail-qr')).toBeTruthy();
   });
@@ -189,8 +184,20 @@ describe('BookingDetailScreen', () => {
     expect(queryByTestId('booking-detail-qr')).toBeNull();
   });
 
-  it('hides QR when status is pendiente in lower-case (case-insensitive)', () => {
-    mockRouteBooking = {...sampleBooking, estado: 'pendiente'};
+  it('hides QR when status is CONFIRMADA (not yet paid)', () => {
+    mockRouteBooking = {...sampleBooking, estado: 'CONFIRMADA'};
+    const {queryByTestId} = render(<BookingDetailScreen />);
+    expect(queryByTestId('booking-detail-qr')).toBeNull();
+  });
+
+  it('hides QR when status is COMPLETADA', () => {
+    mockRouteBooking = {...sampleBooking, estado: 'COMPLETADA'};
+    const {queryByTestId} = render(<BookingDetailScreen />);
+    expect(queryByTestId('booking-detail-qr')).toBeNull();
+  });
+
+  it('hides QR when status is CANCELADA', () => {
+    mockRouteBooking = {...sampleBooking, estado: 'CANCELADA'};
     const {queryByTestId} = render(<BookingDetailScreen />);
     expect(queryByTestId('booking-detail-qr')).toBeNull();
   });

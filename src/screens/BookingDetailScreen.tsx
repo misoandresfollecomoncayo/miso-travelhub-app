@@ -67,9 +67,6 @@ const getStatusInfo = (status: string): StatusInfo => {
   };
 };
 
-const isPendingStatus = (status: string): boolean =>
-  (status || '').toUpperCase() === 'PENDIENTE';
-
 const isConfirmedStatus = (status: string): boolean => {
   const upper = (status || '').toUpperCase();
   return upper === 'CONFIRMADA' || upper === 'CONFIRMADO';
@@ -242,7 +239,7 @@ export const BookingDetailScreen: React.FC = () => {
   const statusLabel = status.labelKey
     ? t(status.labelKey)
     : status.rawLabel || t('reservations.status.unknown');
-  const showQr = !isPendingStatus(booking.estado);
+  const showQr = isPaidStatus(booking.estado);
   const showPayButton = isConfirmedStatus(booking.estado);
 
   const handlePagar = async () => {
