@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">MisoTravelhubApp</string>
+    <!-- Canal por defecto de FCM. Lo crea MainApplication.onCreate y FCM lo
+         lee del meta-data del AndroidManifest. En Android 8+ las push deben
+         pertenecer a un canal explícito, si no quedan en el canal fallback
+         con importance LOW (sin heads-up y oculto en muchas OEMs). -->
+    <string name="default_notification_channel_id">travelhub_default</string>
+    <string name="default_notification_channel_name">Notificaciones de Travelhub</string>
+    <string name="default_notification_channel_description">Avisos de reservas, pagos y promociones.</string>
 </resources>
