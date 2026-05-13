@@ -6,14 +6,36 @@ import {getBookings, BookingListItem} from '../../src/services/bookingApi';
 jest.mock('react-native-vector-icons/Ionicons', () => 'Icon');
 
 const mockNavigate = jest.fn();
-jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({navigate: mockNavigate}),
-}));
+jest.mock('@react-navigation/native', () => {
+  // Re-require React adentro del factory: jest.mock se hoistea por encima de
+  // los imports, así que no se puede usar la variable React del scope externo.
+  const ReactInner = require('react');
+  return {
+    useNavigation: () => ({navigate: mockNavigate}),
+    // Mock de useFocusEffect: en pruebas no hay navigator real, así que lo
+    // tratamos como useEffect (fire-on-mount). Suficiente para validar el
+    // fetch inicial; la regresión real (refetch al re-focus) se cubre en QA
+    // manual + E2E, que es donde existe un navigator de verdad.
+    useFocusEffect: (cb: () => void | (() => void)) =>
+      ReactInner.useEffect(cb, [cb]),
+  };
+});
 
 jest.mock('../../src/services/bookingApi', () => ({
   getBookings: jest.fn(),
 }));
 const mockGetBookings = getBookings as jest.Mock;
+
+let mockPrefsCurrency: 'COP' | 'EUR' | 'USD' = 'COP';
+jest.mock('../../src/preferences/PreferencesContext', () => ({
+  usePreferences: () => ({
+    currency: mockPrefsCurrency,
+    language: 'es',
+    initializing: false,
+    setCurrency: jest.fn(),
+    setLanguage: jest.fn(),
+  }),
+}));
 
 let mockAuth: {
   user: {token: string} | null;
@@ -61,6 +83,7 @@ describe('ReservationsScreen', () => {
     jest.clearAllMocks();
     mockGetBookings.mockReset();
     mockAuth = {user: {token: 'tok_user'}, initializing: false};
+    mockPrefsCurrency = 'COP';
   });
 
   it('renders title', async () => {
@@ -180,11 +203,20 @@ describe('ReservationsScreen', () => {
     expect(mockGetBookings).toHaveBeenCalledTimes(2);
   });
 
-  it('calls getBookings with the user token on mount', async () => {
+  it('calls getBookings with the user token and preferred currency on mount', async () => {
     mockGetBookings.mockResolvedValueOnce([]);
     render(<ReservationsScreen />);
     await waitFor(() =>
-      expect(mockGetBookings).toHaveBeenCalledWith('tok_user'),
+      expect(mockGetBookings).toHaveBeenCalledWith('tok_user', 'COP'),
+    );
+  });
+
+  it('forwards the user-preferred currency (EUR) when fetching bookings', async () => {
+    mockPrefsCurrency = 'EUR';
+    mockGetBookings.mockResolvedValueOnce([]);
+    render(<ReservationsScreen />);
+    await waitFor(() =>
+      expect(mockGetBookings).toHaveBeenCalledWith('tok_user', 'EUR'),
     );
   });
 
