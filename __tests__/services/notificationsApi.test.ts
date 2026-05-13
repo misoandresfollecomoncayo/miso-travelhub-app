@@ -72,11 +72,11 @@ describe('notificationsApi', () => {
   });
 
   describe('unregisterDeviceToken', () => {
-    it('POSTs to /api/v1/notifications/unregister_device', async () => {
+    it('POSTs to /api/v1/notifications/unregister-device', async () => {
       await unregisterDeviceToken({fcmToken: 'fcm-1', token: 'jwt-1'});
       const [url, options] = (globalThis.fetch as jest.Mock).mock.calls[0];
       expect(url).toBe(
-        `${API_BASE_URL}/api/v1/notifications/unregister_device`,
+        `${API_BASE_URL}/api/v1/notifications/unregister-device`,
       );
       expect(options.method).toBe('POST');
       expect(options.headers.Authorization).toBe('Bearer jwt-1');
