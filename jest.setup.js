@@ -23,6 +23,8 @@ jest.mock('@react-native-firebase/messaging', () => {
     onTokenRefresh: jest.fn(() => () => {}),
     onMessage: jest.fn(() => () => {}),
     setBackgroundMessageHandler: jest.fn(),
+    onNotificationOpenedApp: jest.fn(() => () => {}),
+    getInitialNotification: jest.fn(() => Promise.resolve(null)),
   };
   const factory = jest.fn(() => messagingMock);
   factory.AuthorizationStatus = {
@@ -126,6 +128,11 @@ jest.mock('@react-navigation/native', () => ({
     },
   }),
   NavigationContainer: ({children}) => children,
+  createNavigationContainerRef: () => ({
+    navigate: jest.fn(),
+    isReady: jest.fn(() => true),
+    current: null,
+  }),
 }));
 
 jest.mock('@react-navigation/native-stack', () => ({

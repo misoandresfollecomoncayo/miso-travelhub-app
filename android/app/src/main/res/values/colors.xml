@@ -1,0 +1,5 @@
+<resources>
+    <!-- Color de tinte del ícono de notificación en el status bar y el lockscreen.
+         Coincide con Colors.primary (#1565C0) del theme JS. -->
+    <color name="notification_color">#1565C0</color>
+</resources>

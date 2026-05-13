@@ -82,6 +82,35 @@ export const setBackgroundMessageHandler = (
 };
 
 /**
+ * Listener para cuando el usuario tappea una push con la app en background.
+ * NO dispara para pushes recibidas con la app cerrada (quit) — para ese caso
+ * usa `getInitialNotification`. Devuelve la función de unsubscribe.
+ */
+export const onNotificationOpenedFromBackground = (
+  callback: (message: FirebaseMessagingTypes.RemoteMessage) => void,
+): (() => void) => {
+  return messaging().onNotificationOpenedApp(callback);
+};
+
+/**
+ * Retorna el mensaje que abrió la app desde quit-state, o `null` si la app
+ * se lanzó normalmente. Sólo trae un mensaje no-null en el primer launch
+ * después de un tap de push con la app cerrada.
+ */
+export const getInitialNotification =
+  async (): Promise<FirebaseMessagingTypes.RemoteMessage | null> => {
+    try {
+      const message = await messaging().getInitialNotification();
+      return message ?? null;
+    } catch (err) {
+      if (__DEV__) {
+        console.warn('[notifications] getInitialNotification failed', err);
+      }
+      return null;
+    }
+  };
+
+/**
  * Limpia el token FCM del dispositivo (útil al hacer logout para que el
  * usuario actual no siga recibiendo push después de salir).
  */
