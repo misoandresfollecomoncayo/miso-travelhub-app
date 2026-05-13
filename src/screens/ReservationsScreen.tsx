@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
-import {useNavigation} from '@react-navigation/native';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {Colors} from '../theme/colors';
 import {useAuth} from '../auth/AuthContext';
@@ -186,13 +186,19 @@ export const ReservationsScreen: React.FC = () => {
     }
   }, [userToken, currency]);
 
-  useEffect(() => {
-    if (userToken) {
-      fetchBookings();
-    } else {
-      setBookings([]);
-    }
-  }, [userToken, fetchBookings]);
+  // `useFocusEffect` en vez de `useEffect`: el screen pertenece a un bottom-tab
+  // navigator, así que permanece montado entre cambios de tab y un `useEffect`
+  // con deps estables sólo dispararía una vez. Con focus effect refrescamos
+  // las reservas cada vez que el usuario vuelve a la tab.
+  useFocusEffect(
+    useCallback(() => {
+      if (userToken) {
+        fetchBookings();
+      } else {
+        setBookings([]);
+      }
+    }, [userToken, fetchBookings]),
+  );
 
   if (initializing) {
     return (

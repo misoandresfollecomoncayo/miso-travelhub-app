@@ -6,9 +6,20 @@ import {getBookings, BookingListItem} from '../../src/services/bookingApi';
 jest.mock('react-native-vector-icons/Ionicons', () => 'Icon');
 
 const mockNavigate = jest.fn();
-jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({navigate: mockNavigate}),
-}));
+jest.mock('@react-navigation/native', () => {
+  // Re-require React adentro del factory: jest.mock se hoistea por encima de
+  // los imports, así que no se puede usar la variable React del scope externo.
+  const ReactInner = require('react');
+  return {
+    useNavigation: () => ({navigate: mockNavigate}),
+    // Mock de useFocusEffect: en pruebas no hay navigator real, así que lo
+    // tratamos como useEffect (fire-on-mount). Suficiente para validar el
+    // fetch inicial; la regresión real (refetch al re-focus) se cubre en QA
+    // manual + E2E, que es donde existe un navigator de verdad.
+    useFocusEffect: (cb: () => void | (() => void)) =>
+      ReactInner.useEffect(cb, [cb]),
+  };
+});
 
 jest.mock('../../src/services/bookingApi', () => ({
   getBookings: jest.fn(),
