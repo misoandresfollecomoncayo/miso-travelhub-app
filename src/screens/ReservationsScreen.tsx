@@ -14,6 +14,7 @@ import {useNavigation} from '@react-navigation/native';
 import {NativeStackNavigationProp} from '@react-navigation/native-stack';
 import {Colors} from '../theme/colors';
 import {useAuth} from '../auth/AuthContext';
+import {usePreferences} from '../preferences/PreferencesContext';
 import {getBookings, BookingListItem} from '../services/bookingApi';
 import {formatAmount} from '../utils/currency';
 import {useT, useDates} from '../i18n/useT';
@@ -157,6 +158,10 @@ export const ReservationsScreen: React.FC = () => {
   const {user, initializing} = useAuth();
   const navigation = useNavigation<ReservationsNavigationProp>();
   const t = useT();
+  // Pasamos la moneda preferida del usuario al backend para que devuelva los
+  // totales ya convertidos a esa moneda. El refetch se dispara cuando cambia
+  // la preferencia (deps de useCallback/useEffect).
+  const {currency} = usePreferences();
   const userToken = user?.token ?? null;
   const [bookings, setBookings] = useState<BookingListItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -169,7 +174,7 @@ export const ReservationsScreen: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getBookings(userToken);
+      const data = await getBookings(userToken, currency);
       setBookings(data);
     } catch (err) {
       // Mensaje sin traducir aquí — al renderizar se traduce el fallback.
@@ -179,7 +184,7 @@ export const ReservationsScreen: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [userToken]);
+  }, [userToken, currency]);
 
   useEffect(() => {
     if (userToken) {
