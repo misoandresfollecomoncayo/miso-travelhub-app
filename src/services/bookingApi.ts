@@ -291,14 +291,26 @@ const normalizeBookingListItem = (
   };
 };
 
-export const getBookings = async (token: string): Promise<BookingListItem[]> => {
+export const getBookings = async (
+  token: string,
+  moneda: string,
+): Promise<BookingListItem[]> => {
   if (!token) {
     throw new Error('Debes iniciar sesión para ver tus reservas');
   }
 
+  // El backend usa `moneda` para convertir los totales de cada reserva a la
+  // moneda preferida del usuario antes de devolver el payload. Si la
+  // preferencia llegara vacía (no debería: PreferencesContext garantiza un
+  // default), caemos a 'COP'.
+  const query = new URLSearchParams({
+    moneda: (moneda || 'COP').toUpperCase(),
+  });
+  const url = `${GET_BOOKINGS_ENDPOINT}?${query.toString()}`;
+
   let response: Response;
   try {
-    response = await fetch(GET_BOOKINGS_ENDPOINT, {
+    response = await fetch(url, {
       method: 'GET',
       headers: {
         Accept: 'application/json',

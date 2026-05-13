@@ -205,22 +205,57 @@ describe('bookingApi.getBookings', () => {
     (globalThis.fetch as jest.Mock).mockReset();
   });
 
-  it('GETs /api/v1/booking/get_bookings with bearer token', async () => {
+  it('GETs /api/v1/booking/get_bookings with bearer token and moneda query', async () => {
     (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
       makeResponse([]),
     );
-    await getBookings('tok_123');
+    await getBookings('tok_123', 'COP');
     const [url, options] = (globalThis.fetch as jest.Mock).mock.calls[0];
-    expect(url).toBe(`${API_BASE_URL}/api/v1/booking/get_bookings`);
+    expect(url).toBe(
+      `${API_BASE_URL}/api/v1/booking/get_bookings?moneda=COP`,
+    );
     expect(options.method).toBe('GET');
     expect(options.headers.Authorization).toBe('Bearer tok_123');
+  });
+
+  it('forwards EUR as moneda query when user prefers EUR', async () => {
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      makeResponse([]),
+    );
+    await getBookings('tok_123', 'EUR');
+    const [url] = (globalThis.fetch as jest.Mock).mock.calls[0];
+    expect(url).toBe(
+      `${API_BASE_URL}/api/v1/booking/get_bookings?moneda=EUR`,
+    );
+  });
+
+  it('uppercases the moneda parameter defensively', async () => {
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      makeResponse([]),
+    );
+    await getBookings('tok_123', 'usd');
+    const [url] = (globalThis.fetch as jest.Mock).mock.calls[0];
+    expect(url).toBe(
+      `${API_BASE_URL}/api/v1/booking/get_bookings?moneda=USD`,
+    );
+  });
+
+  it('falls back to COP if moneda is an empty string (defensive)', async () => {
+    (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
+      makeResponse([]),
+    );
+    await getBookings('tok_123', '');
+    const [url] = (globalThis.fetch as jest.Mock).mock.calls[0];
+    expect(url).toBe(
+      `${API_BASE_URL}/api/v1/booking/get_bookings?moneda=COP`,
+    );
   });
 
   it('returns empty array when API responds with []', async () => {
     (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
       makeResponse([]),
     );
-    const list = await getBookings('tok_123');
+    const list = await getBookings('tok_123', 'COP');
     expect(list).toEqual([]);
   });
 
@@ -254,7 +289,7 @@ describe('bookingApi.getBookings', () => {
         },
       ]),
     );
-    const list = await getBookings('tok_123');
+    const list = await getBookings('tok_123', 'COP');
     expect(list).toHaveLength(1);
     expect(list[0]).toEqual(
       expect.objectContaining({
@@ -287,7 +322,7 @@ describe('bookingApi.getBookings', () => {
     (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
       makeResponse([{id: 'b-2', total: 500000, moneda: 'COP'}]),
     );
-    const list = await getBookings('tok_123');
+    const list = await getBookings('tok_123', 'COP');
     expect(list[0].total).toBe(500000);
     expect(list[0].moneda).toBe('COP');
   });
@@ -296,7 +331,7 @@ describe('bookingApi.getBookings', () => {
     (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
       makeResponse([{id: 'b-3', total: 100, moneda: 'eur'}]),
     );
-    const list = await getBookings('tok_123');
+    const list = await getBookings('tok_123', 'COP');
     expect(list[0].moneda).toBe('EUR');
   });
 
@@ -306,7 +341,7 @@ describe('bookingApi.getBookings', () => {
     (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
       makeResponse([{id: 'b-4', total: 100}]),
     );
-    const list = await getBookings('tok_123');
+    const list = await getBookings('tok_123', 'COP');
     expect(list[0].moneda).toBe('EUR');
     expect(list[0].total).toBe(100);
   });
@@ -315,7 +350,7 @@ describe('bookingApi.getBookings', () => {
     (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
       makeResponse([{id: 'b-5', total: 500000}]),
     );
-    const list = await getBookings('tok_123');
+    const list = await getBookings('tok_123', 'COP');
     expect(list[0].moneda).toBe('COP');
   });
 
@@ -323,12 +358,12 @@ describe('bookingApi.getBookings', () => {
     (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
       makeResponse([{id: 'b-6', total: 100, currency: 'usd'}]),
     );
-    const list = await getBookings('tok_123');
+    const list = await getBookings('tok_123', 'COP');
     expect(list[0].moneda).toBe('USD');
   });
 
   it('throws when token is missing', async () => {
-    await expect(getBookings('')).rejects.toThrow(
+    await expect(getBookings('', 'COP')).rejects.toThrow(
       'Debes iniciar sesión',
     );
     expect(globalThis.fetch).not.toHaveBeenCalled();
@@ -338,7 +373,7 @@ describe('bookingApi.getBookings', () => {
     (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
       makeResponse({code: 401, message: 'Jwt expired'}, false, 401),
     );
-    await expect(getBookings('tok_123')).rejects.toThrow(
+    await expect(getBookings('tok_123', 'COP')).rejects.toThrow(
       'Tu sesión ha expirado',
     );
   });
@@ -347,14 +382,14 @@ describe('bookingApi.getBookings', () => {
     (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
       makeResponse({code: 500, message: 'Server crashed'}, false, 500),
     );
-    await expect(getBookings('tok_123')).rejects.toThrow('Server crashed');
+    await expect(getBookings('tok_123', 'COP')).rejects.toThrow('Server crashed');
   });
 
   it('returns empty array if payload is not an array (defensive)', async () => {
     (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
       makeResponse({some: 'unexpected'}),
     );
-    const list = await getBookings('tok_123');
+    const list = await getBookings('tok_123', 'COP');
     expect(list).toEqual([]);
   });
 
@@ -362,7 +397,7 @@ describe('bookingApi.getBookings', () => {
     (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
       Promise.reject(new Error('ENOTFOUND')),
     );
-    await expect(getBookings('tok_123')).rejects.toThrow(
+    await expect(getBookings('tok_123', 'COP')).rejects.toThrow(
       'No se pudo conectar con el servidor',
     );
   });
@@ -371,7 +406,7 @@ describe('bookingApi.getBookings', () => {
     (globalThis.fetch as jest.Mock).mockImplementationOnce(() =>
       makeResponse([{}]),
     );
-    const list = await getBookings('tok_123');
+    const list = await getBookings('tok_123', 'COP');
     expect(list[0]).toEqual(
       expect.objectContaining({
         id: 'booking-0',
