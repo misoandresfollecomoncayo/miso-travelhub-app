@@ -233,7 +233,7 @@ producción). Los servicios expuestos son:
 | `bookingApi.bookRoom` | POST | `/api/v1/booking/booking_room` |
 | `bookingApi.getBookings` | GET | `/api/v1/booking/get_bookings?moneda=<COP\|EUR\|USD>` |
 | `notificationsApi.registerDeviceToken` | POST | `/api/v1/notifications/register-device` |
-| `notificationsApi.unregisterDeviceToken` | POST | `/api/v1/notifications/unregister_device` |
+| `notificationsApi.unregisterDeviceToken` | POST | `/api/v1/notifications/unregister-device` |
 
 El parámetro `moneda` en `getBookings` corresponde a la preferencia del
 usuario configurada en *Settings*; el backend devuelve los totales ya
