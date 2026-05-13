@@ -53,7 +53,11 @@ miso-travelhub-app/
 │   │   ├── AppNavigator.tsx                   # Bottom tabs (Buscar / Reservas / Usuario)
 │   │   ├── SearchStackNavigator.tsx           # Stack: Search → Results → Detail → Reservation
 │   │   ├── ReservationsStackNavigator.tsx     # Stack: lista de reservas → detalle
-│   │   └── UserStackNavigator.tsx             # Stack: Login / Register / Forgot / Profile / Settings
+│   │   ├── UserStackNavigator.tsx             # Stack: Login / Register / Forgot / Profile / Settings
+│   │   └── navigationRef.ts                   # Ref global + helper `navigateToReservations` (push → Reservas)
+│   ├── notifications/                         # Capa UI de push notifications
+│   │   ├── ForegroundNotificationBanner.tsx   # Banner in-app cuando llega una push con la app abierta
+│   │   └── NotificationOpenHandler.tsx        # Tap en push (background / quit) → navega a Reservas
 │   ├── preferences/
 │   │   └── PreferencesContext.tsx             # Idioma y moneda persistidos
 │   ├── screens/                               # 14 pantallas
@@ -73,10 +77,10 @@ miso-travelhub-app/
 │   │   └── SettingsScreen.tsx                 # Configuración de idioma y moneda
 │   ├── services/                              # Clientes HTTP del backend
 │   │   ├── authApi.ts                         # POST /auth/login, /auth/register
-│   │   ├── bookingApi.ts                      # POST /booking_room, GET /get_bookings
+│   │   ├── bookingApi.ts                      # POST /booking_room, GET /get_bookings?moneda=…
 │   │   ├── searchApi.ts                       # GET /search_rooms
-│   │   ├── notifications.ts                   # Token FCM y manejo de permisos
-│   │   └── notificationsApi.ts                # POST /notifications/register_device
+│   │   ├── notifications.ts                   # Token FCM, permisos y listeners (foreground/background/quit)
+│   │   └── notificationsApi.ts                # POST /notifications/register-device, /unregister_device
 │   ├── theme/
 │   │   └── colors.ts                          # Paleta cromática
 │   └── utils/
@@ -85,23 +89,31 @@ miso-travelhub-app/
 │       ├── format.ts                          # Formato de precios y códigos de confirmación
 │       ├── images.ts                          # Placeholder ante imágenes inválidas
 │       └── password.ts                        # Validación de contraseña fuerte
-├── __tests__/                                 # Jest + RTL — 38 archivos · 529 pruebas · 93 % cobertura
+├── __tests__/                                 # Jest + RTL — 43 archivos · 577 pruebas · 92.7 % statements / 83.6 % branches
+│   ├── auth/  components/  i18n/  navigation/  notifications/
+│   ├── preferences/  screens/  services/  theme/  utils/  a11y/
 ├── e2e/                                       # Detox 20
 │   ├── jest.config.js
 │   ├── smoke.test.js
-│   ├── login.test.js
-│   └── search.test.js
+│   ├── search.test.js
+│   ├── accessibility.test.js
+│   ├── i18n.test.js
+│   └── login.test.js
 ├── android/                                   # Código nativo Android
-│   └── app/src/androidTest/java/.../DetoxTest.java
+│   ├── app/src/androidTest/java/.../DetoxTest.java
+│   ├── app/src/main/java/.../MainApplication.kt          # Crea NotificationChannel "travelhub_default" (high)
+│   ├── app/src/main/AndroidManifest.xml                  # Meta-data FCM (icon, color, channel_id)
+│   ├── app/src/main/res/drawable/ic_notification.xml     # Ícono blanco status bar
+│   └── app/src/main/res/values/colors.xml                # `notification_color` para el tinte
 ├── ios/                                       # Código nativo iOS
 ├── .github/workflows/
 │   ├── ci.yml                                 # lint + test + e2e-ios + e2e-android
 │   └── cd.yml
 ├── .detoxrc.js                                # Configuración Detox (iOS sim + Android emu)
-├── App.tsx
+├── App.tsx                                    # Providers, NavigationContainer (ref) + banner + open-handler
 ├── index.js                                   # Registro del handler de FCM en background
 ├── jest.config.js
-├── jest.setup.js                              # Mocks globales (Firebase, async-storage, …)
+├── jest.setup.js                              # Mocks globales (Firebase, async-storage, navigation, …)
 └── package.json
 ```
 
@@ -166,6 +178,26 @@ cachés y recompile:
     cd android && ./gradlew clean && cd ..
     npx react-native run-android
 
+### Notificaciones push en Android
+
+A diferencia de iOS, Android (API 26+) requiere un `NotificationChannel`
+registrado para que el sistema muestre las push en background o quit-state.
+La app lo crea en `MainApplication.onCreate()` con importance HIGH, usando
+los recursos:
+
+- `res/values/strings.xml` → ids y nombre del canal (`travelhub_default`).
+- `res/drawable/ic_notification.xml` → ícono blanco monocromo del status bar.
+- `res/values/colors.xml` → tinte (`@color/notification_color`).
+- `AndroidManifest.xml` → meta-data `default_notification_channel_id`,
+  `default_notification_icon`, `default_notification_color`. Las tres llevan
+  `tools:replace` porque `@react-native-firebase/messaging` ya las declara
+  con valores por defecto, y sin la directiva el manifest merger aborta.
+
+Si tras un cambio en estos archivos las notificaciones dejan de aparecer en
+background, **desinstale la app del dispositivo** antes de re-instalar:
+Android cachea la configuración del canal y no la reemplaza una vez
+registrada.
+
 ## 5.4 iOS
 
     npx react-native run-ios --simulator "iPhone 17 Pro"
@@ -199,8 +231,14 @@ producción). Los servicios expuestos son:
 | `authApi.register` | POST | `/api/v1/auth/register` |
 | `searchApi.searchRooms` | GET | `/search/search_rooms` |
 | `bookingApi.bookRoom` | POST | `/api/v1/booking/booking_room` |
-| `bookingApi.getBookings` | GET | `/api/v1/booking/get_bookings` |
-| `notificationsApi.registerDeviceToken` | POST | `/api/v1/notifications/register_device` |
+| `bookingApi.getBookings` | GET | `/api/v1/booking/get_bookings?moneda=<COP\|EUR\|USD>` |
+| `notificationsApi.registerDeviceToken` | POST | `/api/v1/notifications/register-device` |
+| `notificationsApi.unregisterDeviceToken` | POST | `/api/v1/notifications/unregister_device` |
+
+El parámetro `moneda` en `getBookings` corresponde a la preferencia del
+usuario configurada en *Settings*; el backend devuelve los totales ya
+convertidos a esa moneda. La petición se re-dispara automáticamente al
+volver a la tab Reservas (`useFocusEffect`) y al cambiar la preferencia.
 
 La pasarela de pagos externa reside en
 `https://miso-pasarela-pagos-evbwp.ondigitalocean.app/payment` y es invocada
@@ -212,24 +250,16 @@ desde `BookingDetailScreen` cuando el estado de la reserva es `CONFIRMADA`.
 
     npx jest --coverage
 
-- **38 *suites* · 529 pruebas** que cubren utilidades, servicios HTTP
+- **43 *suites* · 577 pruebas** que cubren utilidades, servicios HTTP
   (con `fetch` mockeado), *context providers*, componentes individuales,
-  pantallas (integración con mocks de navegación) y *navigators*.
-- Cobertura actual aproximada: **93 % statements / 83 % branches**.
+  pantallas (integración con mocks de navegación), *navigators*, banner
+  in-app de push y handler de apertura por notificación.
+- Cobertura actual: **92.7 % statements / 83.6 % branches / 92.7 %
+  functions / 92.8 % lines** (medida sobre `src/**/*.{ts,tsx}` + `App.tsx`).
 - Umbral mínimo configurado en `jest.config.js`: 70 % en las cuatro
-  métricas (statements, branches, functions, lines).
+  métricas.
 - La carpeta `e2e/` se excluye automáticamente de la suite unitaria mediante
   `testPathIgnorePatterns`.
-
-Categorías de prueba no incluidas en el alcance actual:
-
-| Tipo | Estado |
-|---|---|
-| Snapshot tests | No implementadas |
-| Pruebas de regresión visual | No implementadas |
-| *Contract tests* contra el backend real | No implementadas (se mockea `fetch`) |
-| Pruebas de rendimiento / *benchmarks* | No implementadas |
-| Auditoría automática de accesibilidad (jest-axe) | No implementadas |
 
 ## 6.2 Pruebas extremo a extremo (Detox)
 
@@ -384,15 +414,29 @@ Linux en GitHub Actions. Para optimizar el consumo se sugiere:
 - **Creación de reserva** con desglose de subtotal, impuestos y total,
   enviados al backend en la moneda nativa de la búsqueda sin conversiones
   intermedias.
-- **Listado y detalle de reservas** del usuario autenticado, con etiqueta de
-  estado (*Pendiente*, *Confirmada*, *Pagada*, *Completada*, *Cancelada*) y
-  presentación del monto en la moneda original de la compra.
-- **Código QR** de la reserva, visible cuando el estado es distinto de
-  `PENDIENTE`.
+- **Listado de reservas** del usuario autenticado. La petición envía la
+  moneda preferida del usuario al backend (`?moneda=<COP|EUR|USD>`), que
+  devuelve los totales convertidos. La lista se refresca automáticamente al
+  re-entrar a la tab ("Reservas") o al cambiar la preferencia, gracias a
+  `useFocusEffect` de React Navigation.
+- **Detalle de reserva** con etiqueta de estado (*Pendiente*, *Confirmada*,
+  *Pagada*, *Completada*, *Cancelada*) y presentación del monto en la
+  moneda original de la compra.
+- **Código QR** de la reserva, visible **únicamente cuando el estado es
+  `PAGADA`**. Sirve como ticket de check-in en el hospedaje.
 - **Pago externo** vía pasarela de pagos cuando la reserva se encuentra en
   estado `CONFIRMADA`.
-- **Notificaciones push (FCM)** con registro del *token* del dispositivo en
-  el backend al iniciar sesión y limpieza al cerrarla.
+- **Notificaciones push (FCM)** — el sistema tiene tres puntos de entrada
+  según el estado de la app:
+  - *Foreground* (app abierta): un banner in-app azul (`ForegroundNotificationBanner`)
+    aparece sobre la UI, se auto-descarta a los 5 s, y al tap navega a Reservas.
+  - *Background* (app en segundo plano): el sistema muestra la push en la
+    bandeja; al tap, `onNotificationOpenedApp` ↦ `navigateToReservations`.
+  - *Quit-state* (app cerrada): al tap, `getInitialNotification` resuelve
+    en el primer mount y la app aterriza directamente en la tab Reservas.
+
+  El token FCM se registra en el backend al iniciar sesión y se desregistra al
+  cerrarla (`POST /notifications/register-device` y `/unregister_device`).
 - **Internacionalización** español / inglés con conmutación en tiempo de
   ejecución desde *Settings*. La totalidad de pantallas, *tabs* y diálogos
   está localizada.
