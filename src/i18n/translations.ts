@@ -235,6 +235,7 @@ export const translations = {
     'reservations.status.paid': 'Pagada',
     'reservations.status.completed': 'Completada',
     'reservations.status.cancelled': 'Cancelada',
+    'reservations.status.refunded': 'Reembolsada',
     'reservations.status.unknown': 'Sin estado',
 
     // Booking detail
@@ -474,6 +475,7 @@ export const translations = {
     'reservations.status.paid': 'Paid',
     'reservations.status.completed': 'Completed',
     'reservations.status.cancelled': 'Cancelled',
+    'reservations.status.refunded': 'Refunded',
     'reservations.status.unknown': 'No status',
 
     // Booking detail

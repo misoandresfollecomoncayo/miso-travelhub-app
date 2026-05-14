@@ -60,6 +60,8 @@ const STATUS_STYLES: Record<
   COMPLETADO: {labelKey: 'reservations.status.completed', bg: '#E3F2FD', fg: '#1565C0'},
   CANCELADA: {labelKey: 'reservations.status.cancelled', bg: '#C62828', fg: '#FFF'},
   CANCELADO: {labelKey: 'reservations.status.cancelled', bg: '#C62828', fg: '#FFF'},
+  REEMBOLSADA: {labelKey: 'reservations.status.refunded', bg: '#5E35B1', fg: '#FFF'},
+  REEMBOLSADO: {labelKey: 'reservations.status.refunded', bg: '#5E35B1', fg: '#FFF'},
 };
 
 const getStatusStyle = (status: string): StatusStyle => {
