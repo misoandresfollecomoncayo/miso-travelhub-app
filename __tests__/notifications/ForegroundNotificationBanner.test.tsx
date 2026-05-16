@@ -17,9 +17,13 @@ jest.mock('../../src/services/notifications', () => ({
   },
 }));
 
-const mockNavigateToReservations = jest.fn(() => Promise.resolve());
+const mockNavigateToReservations = jest.fn((): Promise<void> => Promise.resolve());
+const mockNavigateToBooking = jest.fn(
+  (_id: string): Promise<void> => Promise.resolve(),
+);
 jest.mock('../../src/navigation/navigationRef', () => ({
   navigateToReservations: () => mockNavigateToReservations(),
+  navigateToBooking: (id: string) => mockNavigateToBooking(id),
 }));
 
 describe('ForegroundNotificationBanner', () => {
@@ -28,6 +32,7 @@ describe('ForegroundNotificationBanner', () => {
     mockForegroundCallback = null;
     mockUnsubscribe.mockClear();
     mockNavigateToReservations.mockClear();
+    mockNavigateToBooking.mockClear();
   });
 
   afterEach(() => {
@@ -115,7 +120,7 @@ describe('ForegroundNotificationBanner', () => {
     expect(queryByTestId('foreground-notification-banner')).toBeNull();
   });
 
-  it('navigates to Reservas when the banner is tapped', () => {
+  it('navigates to Reservas when the banner is tapped without booking_id', () => {
     const {getByTestId} = render(<ForegroundNotificationBanner />);
     act(() => {
       mockForegroundCallback?.({
@@ -125,6 +130,35 @@ describe('ForegroundNotificationBanner', () => {
     });
     fireEvent.press(getByTestId('foreground-notification-banner'));
     expect(mockNavigateToReservations).toHaveBeenCalledTimes(1);
+    expect(mockNavigateToBooking).not.toHaveBeenCalled();
+  });
+
+  it('navigates to the specific booking when data.booking_id is present', () => {
+    const {getByTestId} = render(<ForegroundNotificationBanner />);
+    act(() => {
+      mockForegroundCallback?.({
+        messageId: 'm1',
+        notification: {title: 'Reserva confirmada', body: 'OK'},
+        data: {booking_id: 'BKG-42'},
+      });
+    });
+    fireEvent.press(getByTestId('foreground-notification-banner'));
+    expect(mockNavigateToBooking).toHaveBeenCalledTimes(1);
+    expect(mockNavigateToBooking).toHaveBeenCalledWith('BKG-42');
+    expect(mockNavigateToReservations).not.toHaveBeenCalled();
+  });
+
+  it('accepts camelCase bookingId as alternative to snake_case', () => {
+    const {getByTestId} = render(<ForegroundNotificationBanner />);
+    act(() => {
+      mockForegroundCallback?.({
+        messageId: 'm1',
+        notification: {title: 'Reserva', body: 'OK'},
+        data: {bookingId: 'BKG-99'},
+      });
+    });
+    fireEvent.press(getByTestId('foreground-notification-banner'));
+    expect(mockNavigateToBooking).toHaveBeenCalledWith('BKG-99');
   });
 
   it('replaces the current banner when a newer notification arrives', () => {

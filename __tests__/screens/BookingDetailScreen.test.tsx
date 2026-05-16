@@ -1,6 +1,6 @@
 import React from 'react';
 import {Linking} from 'react-native';
-import {render, fireEvent} from '@testing-library/react-native';
+import {render, fireEvent, waitFor} from '@testing-library/react-native';
 
 let mockPrefsCurrency: 'COP' | 'EUR' | 'USD' = 'COP';
 let mockPrefsLanguage: 'es' | 'en' = 'es';
@@ -17,6 +17,29 @@ jest.mock('../../src/preferences/PreferencesContext', () => ({
   SUPPORTED_LANGUAGES: ['es', 'en'],
   SUPPORTED_CURRENCIES: ['COP', 'EUR', 'USD'],
 }));
+
+let mockAuthUser: {token: string} | null = {token: 'tok_user'};
+jest.mock('../../src/auth/AuthContext', () => ({
+  useAuth: () => ({
+    user: mockAuthUser
+      ? {id: 'u-1', name: 'U', email: 'u@x.com', token: mockAuthUser.token}
+      : null,
+    initializing: false,
+    loading: false,
+    login: jest.fn(),
+    register: jest.fn(),
+    logout: jest.fn(),
+  }),
+}));
+
+const mockGetBookings = jest.fn();
+jest.mock('../../src/services/bookingApi', () => {
+  const actual = jest.requireActual('../../src/services/bookingApi');
+  return {
+    ...actual,
+    getBookings: (...args: unknown[]) => mockGetBookings(...args),
+  };
+});
 
 import {
   BookingDetailScreen,
@@ -52,19 +75,25 @@ const sampleBooking: BookingListItem = {
   moneda: 'COP',
 };
 
-let mockRouteBooking: BookingListItem = sampleBooking;
+let mockRouteBooking: BookingListItem | undefined = sampleBooking;
+let mockRouteBookingId: string | undefined;
 
 jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({goBack: mockGoBack, navigate: mockNavigate}),
-  useRoute: () => ({params: {booking: mockRouteBooking}}),
+  useRoute: () => ({
+    params: {booking: mockRouteBooking, bookingId: mockRouteBookingId},
+  }),
 }));
 
 describe('BookingDetailScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockRouteBooking = sampleBooking;
+    mockRouteBookingId = undefined;
     mockPrefsCurrency = 'COP';
     mockPrefsLanguage = 'es';
+    mockAuthUser = {token: 'tok_user'};
+    mockGetBookings.mockReset();
   });
 
   it('renders header title "Consultar reserva"', () => {
@@ -289,6 +318,79 @@ describe('BookingDetailScreen', () => {
       expect(calledUrl).toContain('amount=142.86');
       expect(calledUrl).toContain('currency=EUR');
       openSpy.mockRestore();
+    });
+  });
+
+  describe('fetch-by-id mode (push notification deep-link)', () => {
+    beforeEach(() => {
+      // Cuando llegamos desde una push, no nos pasan `booking` — sólo `bookingId`.
+      mockRouteBooking = undefined;
+    });
+
+    it('shows the loading spinner while resolving the bookingId', () => {
+      mockRouteBookingId = 'BKG-00001';
+      // Promesa que nunca resuelve para mantener al screen en loading state.
+      mockGetBookings.mockImplementationOnce(() => new Promise(() => {}));
+      const {getByTestId} = render(<BookingDetailScreen />);
+      expect(getByTestId('booking-detail-loading')).toBeTruthy();
+    });
+
+    it('renders the booking once getBookings resolves with a matching id', async () => {
+      mockRouteBookingId = 'BKG-00001';
+      mockGetBookings.mockResolvedValueOnce([
+        {...sampleBooking, id: 'OTHER'},
+        sampleBooking,
+      ]);
+      const {findByText, queryByTestId} = render(<BookingDetailScreen />);
+      // Aparece el id de la reserva resuelta.
+      expect(await findByText('BKG-00001')).toBeTruthy();
+      expect(queryByTestId('booking-detail-loading')).toBeNull();
+    });
+
+    it('calls getBookings with the user token and preferred currency', async () => {
+      mockRouteBookingId = 'BKG-00001';
+      mockPrefsCurrency = 'EUR';
+      mockGetBookings.mockResolvedValueOnce([sampleBooking]);
+      render(<BookingDetailScreen />);
+      await waitFor(() =>
+        expect(mockGetBookings).toHaveBeenCalledWith('tok_user', 'EUR'),
+      );
+    });
+
+    it('shows the not-found error when the id does not match any booking', async () => {
+      mockRouteBookingId = 'BKG-DOES-NOT-EXIST';
+      mockGetBookings.mockResolvedValueOnce([sampleBooking]);
+      const {findByTestId, findByText} = render(<BookingDetailScreen />);
+      expect(await findByTestId('booking-detail-error')).toBeTruthy();
+      expect(
+        await findByText('No se encontró la reserva en tu cuenta.'),
+      ).toBeTruthy();
+    });
+
+    it('shows a generic error when getBookings rejects', async () => {
+      mockRouteBookingId = 'BKG-00001';
+      mockGetBookings.mockRejectedValueOnce(new Error('Network down'));
+      const {findByTestId, findByText} = render(<BookingDetailScreen />);
+      expect(await findByTestId('booking-detail-error')).toBeTruthy();
+      // El mensaje del error se propaga (no se traduce dentro del catch).
+      expect(await findByText('Network down')).toBeTruthy();
+    });
+
+    it('shows the error state without calling getBookings when there is no session', async () => {
+      mockRouteBookingId = 'BKG-00001';
+      mockAuthUser = null;
+      const {findByTestId} = render(<BookingDetailScreen />);
+      expect(await findByTestId('booking-detail-error')).toBeTruthy();
+      expect(mockGetBookings).not.toHaveBeenCalled();
+    });
+
+    it('still works if the route gives a `booking` object even with a bookingId (object wins)', () => {
+      mockRouteBooking = sampleBooking;
+      mockRouteBookingId = 'BKG-DIFFERENT';
+      const {getByText} = render(<BookingDetailScreen />);
+      // Renderiza sin fetch: el id que aparece es el del objeto, no el del param.
+      expect(getByText('BKG-00001')).toBeTruthy();
+      expect(mockGetBookings).not.toHaveBeenCalled();
     });
   });
 
