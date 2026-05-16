@@ -249,6 +249,8 @@ export const translations = {
     'bookingDetail.status': 'Estado:',
     'bookingDetail.payButton': 'PAGAR',
     'bookingDetail.payOpenError': 'No se pudo abrir la pasarela de pagos.',
+    'bookingDetail.notFound': 'No se encontró la reserva en tu cuenta.',
+    'bookingDetail.errorLoading': 'No se pudo cargar la reserva.',
 
     // Components — SelectField
     'select.placeholder': 'Selecciona...',
@@ -489,6 +491,8 @@ export const translations = {
     'bookingDetail.status': 'Status:',
     'bookingDetail.payButton': 'PAY',
     'bookingDetail.payOpenError': 'Could not open the payment gateway.',
+    'bookingDetail.notFound': 'We could not find this booking in your account.',
+    'bookingDetail.errorLoading': 'We could not load the booking.',
 
     // Components — SelectField
     'select.placeholder': 'Select...',

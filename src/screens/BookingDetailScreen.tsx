@@ -1,5 +1,6 @@
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import {
+  ActivityIndicator,
   View,
   Text,
   ScrollView,
@@ -18,10 +19,11 @@ import {Colors} from '../theme/colors';
 import {ReservationsStackParamList} from '../navigation/ReservationsStackNavigator';
 import {formatAmount} from '../utils/currency';
 import {usePreferences} from '../preferences/PreferencesContext';
+import {useAuth} from '../auth/AuthContext';
 import {useT, useDates} from '../i18n/useT';
 import {TranslationKey} from '../i18n/translations';
 import {Room} from '../data/room';
-import {BookingListItem} from '../services/bookingApi';
+import {BookingListItem, getBookings} from '../services/bookingApi';
 
 type BookingDetailRouteProp = RouteProp<
   ReservationsStackParamList,
@@ -208,13 +210,143 @@ const Field: React.FC<FieldProps> = ({label, value, testID, onPress}) => {
 export const BookingDetailScreen: React.FC = () => {
   const route = useRoute<BookingDetailRouteProp>();
   const navigation = useNavigation<BookingDetailNavigationProp>();
-  // Sólo necesitamos `language` para el query string del gateway; la moneda
-  // y el total provienen de la propia reserva, no de las preferencias.
-  const {language} = usePreferences();
+  // `language` arma el query string del gateway de pagos; `currency` se usa
+  // sólo cuando hay que pedir la lista de reservas para resolver un
+  // `bookingId` recibido por push (modo "fetch-by-id"). La moneda mostrada
+  // en pantalla siempre es la nativa de la reserva, no la del usuario.
+  const {language, currency} = usePreferences();
+  const {user} = useAuth();
   const t = useT();
   const {monthFull} = useDates();
   const formatLongDate = buildFormatLongDate(monthFull);
-  const {booking} = route.params;
+
+  const paramBooking = route.params?.booking;
+  const requestedId = route.params?.bookingId;
+
+  // Modo (a): nos pasaron el booking completo desde la lista → lo usamos directo.
+  // Modo (b): solo nos pasaron un id (típicamente desde un tap de push) →
+  // pedimos la lista del usuario y buscamos por id.
+  const [resolvedBooking, setResolvedBooking] = useState<BookingListItem | null>(
+    paramBooking ?? null,
+  );
+  const [loadingBooking, setLoadingBooking] = useState<boolean>(
+    !paramBooking && Boolean(requestedId),
+  );
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (paramBooking) {
+      return;
+    }
+    if (!requestedId) {
+      setLoadError('fallback');
+      setLoadingBooking(false);
+      return;
+    }
+    const token = user?.token;
+    if (!token) {
+      // Sin sesión no podemos consultar las reservas. Caemos a estado de error;
+      // la app no expone un flujo para login desde aquí (queda fuera de scope).
+      setLoadError('fallback');
+      setLoadingBooking(false);
+      return;
+    }
+    let cancelled = false;
+    setLoadingBooking(true);
+    setLoadError(null);
+    getBookings(token, currency)
+      .then(list => {
+        if (cancelled) {
+          return;
+        }
+        const match = list.find(b => b.id === requestedId);
+        if (match) {
+          setResolvedBooking(match);
+        } else {
+          setLoadError(t('bookingDetail.notFound'));
+        }
+      })
+      .catch(err => {
+        if (cancelled) {
+          return;
+        }
+        const message = err instanceof Error ? err.message : 'fallback';
+        setLoadError(message);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoadingBooking(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [paramBooking, requestedId, user?.token, currency, t]);
+
+  if (loadingBooking) {
+    return (
+      <View style={styles.container}>
+        <SafeAreaView edges={['top']} style={styles.headerSafeArea}>
+          <View style={styles.header}>
+            <TouchableOpacity
+              testID="booking-detail-back-button"
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.back')}
+              hitSlop={{top: 12, bottom: 12, left: 12, right: 12}}>
+              <Icon name="arrow-back" size={24} color={Colors.textPrimary} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>
+              {t('bookingDetail.headerTitle')}
+            </Text>
+            <View style={styles.headerSpacer} />
+          </View>
+        </SafeAreaView>
+        <View style={styles.centerWrapper} testID="booking-detail-loading">
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      </View>
+    );
+  }
+
+  if (loadError || !resolvedBooking) {
+    return (
+      <View style={styles.container}>
+        <SafeAreaView edges={['top']} style={styles.headerSafeArea}>
+          <View style={styles.header}>
+            <TouchableOpacity
+              testID="booking-detail-back-button"
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.back')}
+              hitSlop={{top: 12, bottom: 12, left: 12, right: 12}}>
+              <Icon name="arrow-back" size={24} color={Colors.textPrimary} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>
+              {t('bookingDetail.headerTitle')}
+            </Text>
+            <View style={styles.headerSpacer} />
+          </View>
+        </SafeAreaView>
+        <View style={styles.centerWrapper} testID="booking-detail-error">
+          <Icon
+            name="alert-circle-outline"
+            size={48}
+            color={Colors.textSecondary}
+          />
+          <Text style={styles.errorText}>
+            {loadError && loadError !== 'fallback'
+              ? loadError
+              : t('bookingDetail.errorLoading')}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  const booking = resolvedBooking;
 
   const destination = [booking.ciudad, booking.pais].filter(Boolean).join(', ');
   const dateRange = `${formatLongDate(booking.fechaCheckIn)} - ${formatLongDate(
@@ -393,6 +525,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     paddingBottom: 24,
+  },
+  centerWrapper: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  errorText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
   },
   qrContainer: {
     alignItems: 'center',

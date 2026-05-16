@@ -21,9 +21,13 @@ jest.mock('../../src/services/notifications', () => ({
   getInitialNotification: () => mockGetInitialNotification(),
 }));
 
-const mockNavigateToReservations = jest.fn(() => Promise.resolve());
+const mockNavigateToReservations = jest.fn((): Promise<void> => Promise.resolve());
+const mockNavigateToBooking = jest.fn(
+  (_id: string): Promise<void> => Promise.resolve(),
+);
 jest.mock('../../src/navigation/navigationRef', () => ({
   navigateToReservations: () => mockNavigateToReservations(),
+  navigateToBooking: (id: string) => mockNavigateToBooking(id),
 }));
 
 const flushAsync = () => act(() => Promise.resolve());
@@ -33,6 +37,7 @@ describe('NotificationOpenHandler', () => {
     mockBackgroundCallback = null;
     mockBackgroundUnsubscribe.mockClear();
     mockNavigateToReservations.mockClear();
+    mockNavigateToBooking.mockClear();
     mockGetInitialNotification = jest.fn(() => Promise.resolve(null));
   });
 
@@ -41,7 +46,7 @@ describe('NotificationOpenHandler', () => {
     expect(toJSON()).toBeNull();
   });
 
-  it('navigates to Reservas when a push is tapped from background', async () => {
+  it('navigates to Reservas when a push without booking_id is tapped from background', async () => {
     render(<NotificationOpenHandler />);
     await flushAsync();
     expect(mockNavigateToReservations).not.toHaveBeenCalled();
@@ -52,18 +57,62 @@ describe('NotificationOpenHandler', () => {
       });
     });
     expect(mockNavigateToReservations).toHaveBeenCalledTimes(1);
+    expect(mockNavigateToBooking).not.toHaveBeenCalled();
   });
 
-  it('navigates to Reservas when the app was launched from a quit-state push tap', async () => {
+  it('navigates to the specific booking when data.booking_id is present (background)', async () => {
+    render(<NotificationOpenHandler />);
+    await flushAsync();
+    act(() => {
+      mockBackgroundCallback?.({
+        messageId: 'bg-2',
+        notification: {title: 'Reserva confirmada', body: 'OK'},
+        data: {booking_id: 'BKG-42'},
+      });
+    });
+    expect(mockNavigateToBooking).toHaveBeenCalledTimes(1);
+    expect(mockNavigateToBooking).toHaveBeenCalledWith('BKG-42');
+    expect(mockNavigateToReservations).not.toHaveBeenCalled();
+  });
+
+  it('accepts camelCase bookingId as alternative to snake_case', async () => {
+    render(<NotificationOpenHandler />);
+    await flushAsync();
+    act(() => {
+      mockBackgroundCallback?.({
+        messageId: 'bg-3',
+        notification: {title: 'Reserva', body: 'OK'},
+        data: {bookingId: 'BKG-99'},
+      });
+    });
+    expect(mockNavigateToBooking).toHaveBeenCalledWith('BKG-99');
+  });
+
+  it('navigates to the booking when the app was launched from a quit-state push with booking_id', async () => {
     mockGetInitialNotification = jest.fn(() =>
       Promise.resolve({
         messageId: 'quit-1',
+        notification: {title: 'Hola', body: 'Mundo'},
+        data: {booking_id: 'BKG-7'},
+      }),
+    );
+    render(<NotificationOpenHandler />);
+    await flushAsync();
+    expect(mockNavigateToBooking).toHaveBeenCalledWith('BKG-7');
+    expect(mockNavigateToReservations).not.toHaveBeenCalled();
+  });
+
+  it('falls back to Reservas on quit-state when no booking_id is present', async () => {
+    mockGetInitialNotification = jest.fn(() =>
+      Promise.resolve({
+        messageId: 'quit-2',
         notification: {title: 'Hola', body: 'Mundo'},
       }),
     );
     render(<NotificationOpenHandler />);
     await flushAsync();
     expect(mockNavigateToReservations).toHaveBeenCalledTimes(1);
+    expect(mockNavigateToBooking).not.toHaveBeenCalled();
   });
 
   it('does NOT navigate when the app was launched normally (no initial notification)', async () => {
@@ -71,6 +120,7 @@ describe('NotificationOpenHandler', () => {
     render(<NotificationOpenHandler />);
     await flushAsync();
     expect(mockNavigateToReservations).not.toHaveBeenCalled();
+    expect(mockNavigateToBooking).not.toHaveBeenCalled();
   });
 
   it('unsubscribes from the background-tap listener on unmount', () => {
