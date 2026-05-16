@@ -3,7 +3,10 @@ import {StyleSheet, Text, TouchableOpacity} from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {FirebaseMessagingTypes} from '@react-native-firebase/messaging';
 import {Colors} from '../theme/colors';
-import {navigateToReservations} from '../navigation/navigationRef';
+import {
+  navigateToBooking,
+  navigateToReservations,
+} from '../navigation/navigationRef';
 import {onForegroundMessage} from '../services/notifications';
 
 const AUTO_DISMISS_MS = 5000;
@@ -12,6 +15,7 @@ interface BannerContent {
   id: string;
   title: string;
   body: string;
+  bookingId?: string;
 }
 
 const pickString = (value: unknown): string | undefined =>
@@ -31,10 +35,16 @@ const extractContent = (
   if (!title && !body) {
     return null;
   }
+  // Si la push trae `booking_id` (o variante camelCase), lo guardamos en el
+  // banner para que el tap navegue directo a esa reserva. Aceptamos ambos
+  // formatos por tolerancia con el backend.
+  const bookingId =
+    pickString(msg.data?.booking_id) ?? pickString(msg.data?.bookingId);
   return {
     id: msg.messageId || `msg-${Date.now()}`,
     title: title ?? '',
     body: body ?? '',
+    bookingId,
   };
 };
 
@@ -83,8 +93,13 @@ export const ForegroundNotificationBanner: React.FC = () => {
       testID="foreground-notification-banner"
       style={[styles.banner, {top: insets.top + 8}]}
       onPress={() => {
+        const pendingBookingId = content.bookingId;
         setContent(null);
-        navigateToReservations();
+        if (pendingBookingId) {
+          navigateToBooking(pendingBookingId);
+        } else {
+          navigateToReservations();
+        }
       }}
       accessibilityRole="button"
       accessibilityLabel={
